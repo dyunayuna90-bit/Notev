@@ -82,6 +82,20 @@
                 document.getElementById('btnCancelSelect').addEventListener('click', () => this.exitSelectionMode());
                 document.getElementById('btnDeleteSelected').addEventListener('click', () => this.deleteSelected());
                 document.getElementById('btnPinSelected').addEventListener('click', () => this.togglePinSelected());
+
+                // Give the sticky Home header a soft contact shadow only once
+                // there's actually content scrolled underneath it, instead of
+                // a shadow permanently glued to it at rest — a small touch
+                // that makes the list feel like it's moving under a fixed
+                // surface rather than the header just floating arbitrarily.
+                const notesScroller = document.getElementById('viewNotesList');
+                if (notesScroller) {
+                    notesScroller.addEventListener('scroll', () => {
+                        const elevated = notesScroller.scrollTop > 4;
+                        document.getElementById('headerDefault').classList.toggle('is-elevated', elevated);
+                        document.getElementById('headerSelection').classList.toggle('is-elevated', elevated);
+                    }, { passive: true });
+                }
             },
 
             renderNotesList(filter = '') {
@@ -112,9 +126,15 @@
                 const pinnedNotes = filteredNotes.filter(n => n.pinned);
                 const restNotes = filteredNotes.filter(n => !n.pinned);
 
+                // Shared counter across pinned + regular sections so the
+                // very first cards on screen (pinned) settle first and
+                // everything below staggers on from there, instead of two
+                // separate groups both restarting at 0.
+                let cardIndex = 0;
+
                 if (pinnedNotes.length > 0) {
                     pinnedSection.classList.remove('hidden');
-                    pinnedNotes.forEach(note => pinnedContainer.appendChild(this.createNoteCard(note)));
+                    pinnedNotes.forEach(note => pinnedContainer.appendChild(this.createNoteCard(note, cardIndex++)));
                 } else {
                     pinnedSection.classList.add('hidden');
                 }
@@ -124,13 +144,17 @@
                 // and a label just adds noise.
                 allNotesLabel.classList.toggle('hidden', pinnedNotes.length === 0);
 
-                restNotes.forEach(note => container.appendChild(this.createNoteCard(note)));
+                restNotes.forEach(note => container.appendChild(this.createNoteCard(note, cardIndex++)));
             },
 
             // Builds a single note card, wired for both the normal "tap to
             // open" flow and the long-press-to-select / tap-to-toggle flow
-            // used while batch selection mode is active.
-            createNoteCard(note) {
+            // used while batch selection mode is active. `index` only
+            // drives the entrance stagger (--stagger, read by .note-card's
+            // animation-delay in styles.css) and is capped so a very long
+            // list doesn't leave the last cards waiting a long time to
+            // appear.
+            createNoteCard(note, index = 0) {
                 const isSelected = this.selectedIds.has(note.id);
 
                 const card = document.createElement('div');
@@ -139,8 +163,9 @@
                 // that's what makes the open/close morph look like the card is
                 // really stretching into the page instead of just a generic
                 // animated rectangle.
-                card.className = `btn-retro p-4 rounded-md flex flex-col justify-between cursor-pointer transition-shadow relative select-none ${isSelected ? 'ring-4 ring-vintage-accent brightness-95' : ''}`;
+                card.className = `note-card p-4 flex flex-col justify-between cursor-pointer relative select-none ${isSelected ? 'ring-4 ring-vintage-accent brightness-95' : ''}`;
                 card.style.backgroundColor = SettingsModule.getPaperColor();
+                card.style.setProperty('--stagger', Math.min(index, 10));
                 card.dataset.noteId = note.id;
 
                 // Strip HTML tags for clean card preview
@@ -487,8 +512,19 @@
 
             toggleModal(modalId, show) {
                 const modal = document.getElementById(modalId);
-                if (show) modal.classList.remove('hidden');
-                else modal.classList.add('hidden');
+                if (show) {
+                    modal.classList.remove('hidden');
+                    // Re-trigger the entrance animation every time the sheet
+                    // opens (removing then re-adding the class), rather than
+                    // just leaving it on permanently, so reopening Settings
+                    // later in the session still plays the reveal instead of
+                    // only doing it the very first time.
+                    modal.classList.remove('modal-animate-in');
+                    void modal.offsetWidth; // force reflow so the class removal registers
+                    modal.classList.add('modal-animate-in');
+                } else {
+                    modal.classList.add('hidden');
+                }
             },
 
             positionBubble(rect) {
