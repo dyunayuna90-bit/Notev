@@ -6,7 +6,19 @@
            plain em would if a span ever ended up nested inside another
            font's span — while still actually responding to the font-size
            slider, which a hardcoded rem value never could. */
-        .font-typewriter { font-family: 'Special Elite', 'Courier Prime', monospace; font-size: calc(var(--note-font-size, 18px) * 1); }
+        /* "Mesin Tik" note style — was a literal monospace typewriter font
+           (Special Elite) before; swapped for Indie Flower, a looser
+           handwritten-marker style, per user preference. Multiplier bumped
+           slightly (1 → 1.05) since Indie Flower renders a touch smaller
+           than Special Elite at the same font-size — kept in sync with
+           SettingsModule.FONT_SIZE_MULTIPLIER['font-typewriter']. */
+        .font-typewriter { font-family: 'Indie Flower', cursive; font-size: calc(var(--note-font-size, 18px) * 1.05); }
+        /* UI-chrome handwriting font — same Caveat family already used for
+           the "Tulisan Tangan" note style, but WITHOUT that style's forced
+           font-size/letter-spacing overrides, so it can sit on <body> and
+           drive all default UI text (headers, buttons, labels) while every
+           element keeps its own Tailwind text-size classes untouched. */
+        .font-ui-hand { font-family: 'Caveat', cursive; font-weight: 600; }
         .font-handwriting { font-family: 'Caveat', cursive; font-weight: 500; font-size: calc(var(--note-font-size, 18px) * 1.2); letter-spacing: 0.2px; }
         .font-cursive { font-family: 'Dancing Script', cursive; font-size: calc(var(--note-font-size, 18px) * 1.15); }
         .font-title { font-family: 'Cinzel', serif; }
@@ -27,10 +39,17 @@
             box-shadow: 0 0 0 2px rgba(140, 58, 43, 0.45);
         }
 
-        /* Disable native Android selection callouts & touch highlights */
+        /* Disable native Android selection callouts & touch highlights.
+           `outline: none` here also kills the default browser/WebView
+           focus ring (shows up as a thin orange box around whatever was
+           last tapped, e.g. buttons) — this app has its own visual
+           pressed/active states (.btn-retro, active:scale-90, etc.), so
+           the native focus outline is just visual noise, not a needed
+           accessibility affordance in this context. */
         * {
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
+            outline: none;
         }
 
         /* UI chrome (headers, buttons, note-list titles/previews, settings
@@ -84,6 +103,20 @@
             background-attachment: local;
         }
 
+        /* Momentum/inertial scrolling for the app's main scrollable panes
+           (notes list, note editor paper, settings page). Without
+           `-webkit-overflow-scrolling: touch`, some Android WebViews scroll
+           these plain `overflow-y-auto` boxes in a stiff, step-by-step way
+           instead of the fluid native fling-and-decelerate feel used
+           everywhere else in the OS — that's the main source of "scroll
+           terasa tidak mulus". `overscroll-behavior: contain` stops a
+           scroll that hits the top/bottom of one of these boxes from
+           bleeding into a rubber-band bounce on the page behind it. */
+        .momentum-scroll {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+
         /* Base Paper styles */
         .theme-vintage {
             background-color: #fcf8ec;
@@ -105,14 +138,23 @@
 
         /* "Kertas Tua" (Aged Paper) Overlay — Default Off.
            A static aging effect, not a VHS/CRT one: no scanlines, no
-           flicker, nothing animated. It's built from three still layers:
-           1) soft brown "age spot" blotches, positioned off-center like
-              real foxing/handling stains on old paper
-           2) a warm sepia vignette that darkens and yellows toward the
-              edges, like a page that's sat exposed at its corners
-           3) a fine fractal-noise grain for paper-fiber texture, generated
-              inline as an SVG feTurbulence filter so no external asset is
-              needed
+           flicker, nothing animated. Layers, bottom to top:
+           1-2) soft brown "age spot" blotches, positioned off-center like
+              real foxing/handling stains on old paper (now 4 spots instead
+              of 3, so it doesn't read as a symmetric/generic pattern)
+           3) a canvas-weave crosshatch — two fine diagonal repeating
+              stripe sets — laid UNDER the paper grain, giving the surface
+              actual woven-fabric texture instead of just flat "stained
+              paper" (this is the "texture kertas canvas tua" addition)
+           4) a warm sepia vignette that darkens and yellows toward the
+              edges, deepened and pulled inward further than before so the
+              corners genuinely look worn/handled, not just faintly tinted
+           5) a coarse fractal-noise grain (large-scale mottling)
+           6) a fine fractal-noise grain (paper-fiber grit) — the coarse +
+              fine pairing reads as a rougher, more tactile old-paper
+              surface than one grain layer alone
+           Both noise layers are generated inline as SVG feTurbulence
+           filters so no external image asset is needed.
            .paper-aged-effect covers the whole app (fixed/viewport, for the
            real note editor); .paper-aged-effect-preview is the same look
            scoped to a single, already relative-positioned box (used by the
@@ -120,16 +162,20 @@
         .paper-aged-effect,
         .paper-aged-effect-preview {
             pointer-events: none;
-            opacity: 0.55;
+            opacity: 0.7;
             mix-blend-mode: multiply;
             background-image:
-                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.30) 0%, rgba(120,86,42,0) 24%),
-                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.26) 0%, rgba(120,86,42,0) 28%),
-                radial-gradient(circle at 68% 10%, rgba(120,86,42,0.18) 0%, rgba(120,86,42,0) 20%),
-                radial-gradient(ellipse at center, rgba(255,248,225,0) 42%, rgba(70,48,24,0.5) 100%),
-                url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
-            background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
-            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 160px 160px;
+                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.32) 0%, rgba(120,86,42,0) 24%),
+                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.28) 0%, rgba(120,86,42,0) 28%),
+                radial-gradient(circle at 68% 8%, rgba(120,86,42,0.20) 0%, rgba(120,86,42,0) 20%),
+                radial-gradient(circle at 6% 86%, rgba(120,86,42,0.22) 0%, rgba(120,86,42,0) 22%),
+                repeating-linear-gradient(45deg, rgba(90,62,32,0.10) 0px, rgba(90,62,32,0.10) 1px, transparent 1px, transparent 3px),
+                repeating-linear-gradient(-45deg, rgba(90,62,32,0.10) 0px, rgba(90,62,32,0.10) 1px, transparent 1px, transparent 3px),
+                radial-gradient(ellipse at center, rgba(255,248,225,0) 34%, rgba(60,40,20,0.68) 100%),
+                url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23c)' opacity='0.35'/></svg>"),
+                url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/></svg>");
+            background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat, repeat, repeat;
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, auto, auto, 100% 100%, 240px 240px, 140px 140px;
         }
 
         .paper-aged-effect {
