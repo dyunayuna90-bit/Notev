@@ -40,17 +40,16 @@ jobs:
         run: npx tailwindcss -c tailwind.config.js -i www/css/tailwind-input.css -o www/css/tailwind.compiled.css --minify
 
       # ================================================================
-      # Copy the vintage/handwriting Google Fonts (Caveat, Cinzel, Courier
-      # Prime, Dancing Script, Special Elite) from node_modules into
-      # www/libs/fonts, so the APK never fetches them from
-      # fonts.googleapis.com at runtime either. Each family's per-weight
-      # CSS files are concatenated into one all.css, with the actual woff2
-      # files copied alongside so their relative url(./files/...) paths
-      # keep resolving correctly.
+      # Copy the vintage/handwriting Google Fonts (Caveat, Cinzel, Dancing
+      # Script, Indie Flower) from node_modules into www/libs/fonts, so the
+      # APK never fetches them from fonts.googleapis.com at runtime either.
+      # Each family's per-weight CSS files are concatenated into one
+      # all.css, with the actual woff2 files copied alongside so their
+      # relative url(./files/...) paths keep resolving correctly.
       # ================================================================
-      - name: Copy Offline Fonts (Caveat, Cinzel, Courier Prime, Dancing Script, Special Elite)
+      - name: Copy Offline Fonts (Caveat, Cinzel, Dancing Script, Indie Flower)
         run: |
-          for family in caveat cinzel courier-prime dancing-script special-elite; do
+          for family in caveat cinzel dancing-script indie-flower; do
             mkdir -p "www/libs/fonts/$family"
             cp -r "node_modules/@fontsource/$family/files" "www/libs/fonts/$family/files"
             cat node_modules/@fontsource/$family/*.css > "www/libs/fonts/$family/all.css"
@@ -77,7 +76,7 @@ jobs:
 
           # Replace the Google Fonts preconnect + stylesheet <link> tags with
           # local stylesheet links for each bundled font family.
-          font_families = ["caveat", "cinzel", "courier-prime", "dancing-script", "special-elite"]
+          font_families = ["caveat", "cinzel", "dancing-script", "indie-flower"]
           local_font_links = "\n".join(
               f'    <link rel="stylesheet" href="libs/fonts/{fam}/all.css">' for fam in font_families
           )
