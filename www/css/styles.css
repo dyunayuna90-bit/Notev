@@ -1,0 +1,306 @@
+        /* Custom Fonts mapping */
+        /* Font spans size themselves off --note-font-size (kept in sync with
+           the "Ukuran Huruf Default" setting on #editorArea) via calc(),
+           instead of a fixed rem/em value. calc(var(...)) reads the same
+           custom property at any nesting depth, so it can't compound the way
+           plain em would if a span ever ended up nested inside another
+           font's span — while still actually responding to the font-size
+           slider, which a hardcoded rem value never could. */
+        .font-typewriter { font-family: 'Special Elite', 'Courier Prime', monospace; font-size: calc(var(--note-font-size, 18px) * 1); }
+        .font-handwriting { font-family: 'Caveat', cursive; font-weight: 500; font-size: calc(var(--note-font-size, 18px) * 1.2); letter-spacing: 0.2px; }
+        .font-cursive { font-family: 'Dancing Script', cursive; font-size: calc(var(--note-font-size, 18px) * 1.15); }
+        .font-title { font-family: 'Cinzel', serif; }
+
+        /* Active font-option indicator (Settings page + selection bubble).
+           Uses its own class with !important instead of toggling Tailwind
+           utility classes (bg-vintage-accent/text-white) alongside the
+           option's own base classes (bg-vintage-paper, border-vintage-border)
+           — with two same-specificity utility classes on one element, which
+           one visually wins depends on Tailwind's generated stylesheet
+           order, not which was toggled on last, so the "active" look could
+           end up barely visible. This guarantees a strong, unambiguous
+           selected state every time. */
+        .font-option-active {
+            background-color: #8c3a2b !important;
+            color: #ffffff !important;
+            border-color: #6b2b1f !important;
+            box-shadow: 0 0 0 2px rgba(140, 58, 43, 0.45);
+        }
+
+        /* Disable native Android selection callouts & touch highlights */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
+        /* UI chrome (headers, buttons, note-list titles/previews, settings
+           labels, etc.) should never be selectable — behave like a native
+           app. Only the actual note content inside .editable-area (and its
+           descendants, e.g. font/highlight spans) opts back in to text
+           selection. */
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .editable-area,
+        .editable-area * {
+            user-select: text;
+            -webkit-user-select: text;
+            outline: none;
+            -webkit-touch-callout: none;
+        }
+
+        /* Lined Paper background generator spanning full height.
+           Uses its OWN variable, --ruled-line-height, driven by the
+           "Jarak Garis Buku" slider — deliberately separate from the
+           text's own line-height ("Spasi Baris Huruf", set as a unitless
+           multiplier via inline style on #editorArea, not this var, so it
+           recomputes per element from that element's own font-size instead
+           of being one fixed px box shared by every run regardless of its
+           actual rendered size). Two independent sliders instead of
+           one shared value: you can match them for text that sits exactly
+           on the ruling, or set them apart on purpose (e.g. two lines of
+           text per ruled line). Whatever you pick, each one stays fixed
+           at exactly what its own slider says — no drift, since it's one
+           single repeat value applied consistently down the page. */
+        .paper-lined-vintage {
+            background-image: repeating-linear-gradient(
+                transparent,
+                transparent calc(var(--ruled-line-height, 36px) - 1px),
+                #cbbaa1 calc(var(--ruled-line-height, 36px) - 1px),
+                #cbbaa1 var(--ruled-line-height, 36px)
+            );
+            background-attachment: local;
+        }
+
+        .paper-lined-white {
+            background-image: repeating-linear-gradient(
+                transparent,
+                transparent calc(var(--ruled-line-height, 36px) - 1px),
+                #e2e8f0 calc(var(--ruled-line-height, 36px) - 1px),
+                #e2e8f0 var(--ruled-line-height, 36px)
+            );
+            background-attachment: local;
+        }
+
+        /* Base Paper styles */
+        .theme-vintage {
+            background-color: #fcf8ec;
+            color: #2c221e;
+        }
+
+        .theme-white {
+            background-color: #ffffff;
+            color: #1a1a1a;
+        }
+
+        /* Note content (title + body) fades in after the editor view
+           becomes visible / a note is loaded, instead of popping in
+           instantly the moment the view is unhidden. */
+        #noteTitleInput,
+        #editorArea {
+            transition: opacity 0.28s ease;
+        }
+
+        /* "Kertas Tua" (Aged Paper) Overlay — Default Off.
+           A static aging effect, not a VHS/CRT one: no scanlines, no
+           flicker, nothing animated. It's built from three still layers:
+           1) soft brown "age spot" blotches, positioned off-center like
+              real foxing/handling stains on old paper
+           2) a warm sepia vignette that darkens and yellows toward the
+              edges, like a page that's sat exposed at its corners
+           3) a fine fractal-noise grain for paper-fiber texture, generated
+              inline as an SVG feTurbulence filter so no external asset is
+              needed
+           .paper-aged-effect covers the whole app (fixed/viewport, for the
+           real note editor); .paper-aged-effect-preview is the same look
+           scoped to a single, already relative-positioned box (used by the
+           Settings paper preview). */
+        .paper-aged-effect,
+        .paper-aged-effect-preview {
+            pointer-events: none;
+            opacity: 0.55;
+            mix-blend-mode: multiply;
+            background-image:
+                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.30) 0%, rgba(120,86,42,0) 24%),
+                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.26) 0%, rgba(120,86,42,0) 28%),
+                radial-gradient(circle at 68% 10%, rgba(120,86,42,0.18) 0%, rgba(120,86,42,0) 20%),
+                radial-gradient(ellipse at center, rgba(255,248,225,0) 42%, rgba(70,48,24,0.5) 100%),
+                url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
+            background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 160px 160px;
+        }
+
+        .paper-aged-effect {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9999;
+        }
+
+        /* Eye Protection Mode ("Mode Perlindungan Mata") — a warm amber
+           filter over the ENTIRE app (every view, not just the editor),
+           like the "reading mode" / blue-light filters on e-readers and
+           phones. Sits above the aged-paper overlay so it always tints
+           the final result. pointer-events:none so it never blocks taps. */
+        .eye-protection-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 10000;
+            pointer-events: none;
+            background-color: #ffb74d;
+            mix-blend-mode: multiply;
+            opacity: 0.34;
+        }
+
+        .paper-aged-effect-preview {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            border-radius: inherit;
+        }
+
+
+        /* Inline headings & formatting */
+        .editable-area h1 {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-top: 0.4em;
+            margin-bottom: 0.2em;
+            border-bottom: 2px solid currentColor;
+            display: block;
+        }
+        .editable-area h2 {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-top: 0.3em;
+            margin-bottom: 0.2em;
+            display: block;
+        }
+
+        /* Selection bubble page-switch transition (default <-> font/highlight page) */
+        #bubblePageDefault, #bubblePageFont {
+            transition: opacity 0.14s ease, transform 0.14s ease;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #bubblePageDefault.bubble-slide-left, #bubblePageFont.bubble-slide-left {
+            opacity: 0;
+            transform: translateX(-8px);
+        }
+        #bubblePageDefault.bubble-slide-right, #bubblePageFont.bubble-slide-right {
+            opacity: 0;
+            transform: translateX(8px);
+        }
+
+        /* Button Retro Shadow Effect */
+        .btn-retro {
+            border: 2px solid #2c221e;
+            box-shadow: 3px 3px 0px #2c221e;
+            transition: all 0.1s ease;
+        }
+        .btn-retro:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #2c221e;
+        }
+
+        /* Settings toggle switch — replaces plain checkboxes with a small
+           interactive on/off track+knob, in the vintage palette, so every
+           on/off setting in Settings looks and behaves the same way. */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .toggle-switch .toggle-track {
+            position: absolute;
+            inset: 0;
+            background-color: #b8a686;
+            border-radius: 999px;
+            transition: background-color 0.18s ease;
+        }
+        .toggle-switch .toggle-track::before {
+            content: "";
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 18px; height: 18px;
+            background-color: #fcf8ec;
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+            transition: transform 0.18s ease;
+        }
+        .toggle-switch input:checked + .toggle-track {
+            background-color: #8c3a2b;
+        }
+        .toggle-switch input:checked + .toggle-track::before {
+            transform: translateX(16px);
+        }
+
+        /* Settings section card — one consistent container style (icon +
+           label header, divided rows inside) used for every settings
+           group, instead of each group inventing its own spacing/border. */
+        .settings-card {
+            background-color: #e8dbb8;
+            border: 1px solid #b8a686;
+            border-radius: 0.85rem;
+            overflow: hidden;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.7rem 0.85rem;
+        }
+        .settings-row + .settings-row {
+            border-top: 1px solid rgba(184, 166, 134, 0.5);
+        }
+        .settings-row-body {
+            padding: 0.7rem 0.85rem;
+        }
+        .settings-row-body + .settings-row-body,
+        .settings-row-body + .settings-row,
+        .settings-row + .settings-row-body {
+            border-top: 1px solid rgba(184, 166, 134, 0.5);
+        }
+
+/* ==========================================================================
+   SAFE-AREA (NOTCH / CUTOUT / GESTURE-BAR) PADDING
+   Requires <meta name="viewport" content="... viewport-fit=cover"> in
+   index.html so the WebView actually reports non-zero env(safe-area-inset-*)
+   values instead of always 0. Applied directly to the two top-level
+   fixed/full-viewport containers (#appRoot and #settingsModal) rather than
+   <body>, since padding on <body> has no effect on descendants that are
+   themselves position:fixed (they're positioned against the viewport, not
+   against <body>'s padded box). This keeps headers/content from sitting
+   under a camera notch/status bar and keeps the bottom toolbar clear of the
+   gesture-navigation bar / home indicator, on both Android and iOS.
+   ========================================================================== */
+#appRoot,
+#settingsModal {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    box-sizing: border-box;
+}
+
+/* The floating selection bubble is positioned in JS from
+   getBoundingClientRect(), which already accounts for the viewport, but on a
+   landscape device with a side notch it can still start flush against the
+   cutout edge. This nudges its safety margin without touching the JS. */
+#selectionBubble {
+    margin-left: env(safe-area-inset-left, 0px);
+    margin-right: env(safe-area-inset-right, 0px);
+}
