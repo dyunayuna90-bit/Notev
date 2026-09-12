@@ -18,24 +18,61 @@
                 });
                 this.titleInput.addEventListener('input', () => this.saveCurrentNote());
 
-                // --- Keyboard-aware viewport fix ---
-                // On Android WebView, h-screen/h-full containers keep the full
-                // layout-viewport height when the soft keyboard opens (only the
-                // visual viewport shrinks), so the browser has no way to know the
-                // "kertas" area is actually half-covered and never auto-scrolls the
-                // caret into view. We shrink the app container to match the real
-                // visible height, then manually keep the caret above the keyboard.
-                this.applyViewportHeightFix();
+                // --- Keyboard-aware caret scrolling ---
+                // The <meta viewport ... interactive-widget=resizes-content> tag
+                // already makes the browser shrink the real layout viewport (and
+                // every h-screen/100vh/fixed-inset-0 container along with it)
+                // when the keyboard opens — no JS needed for that part. What the
+                // browser does NOT do on its own is scroll the caret above the
+                // keyboard when it's inside a *nested* scrollable container
+                // (#paperCanvas), since native caret-follow only ever scrolls the
+                // document itself. That's the only thing still patched manually
+                // here.
+                //
+                // (This used to ALSO manually resize #appRoot/#settingsModal/
+                // <body> to visualViewport.height on every tick, in lockstep
+                // with this same listener, via applyViewportHeightFix(). That
+                // duplicated what interactive-widget=resizes-content already
+                // does — and the two resize mechanisms landing on slightly
+                // different animation frames during the keyboard's open/close
+                // animation is what caused the intermittent tan-colored strip
+                // flashing above the keyboard: body's bg-vintage-base peeking
+                // through a momentary gap between its JS-forced height and the
+                // real, natively-resized viewport. Removing the JS side of that
+                // duplication removes the race entirely.)
                 if (window.visualViewport) {
                     window.visualViewport.addEventListener('resize', () => {
-                        this.applyViewportHeightFix();
                         requestAnimationFrame(() => this.scrollCaretIntoView());
                     });
                 }
 
+                // Capture the paper's scroll position the instant BEFORE a tap
+                // can turn into a focus, while it's still definitely untouched.
+                // Some Android WebViews auto-scroll a large contenteditable's
+                // whole bounding box into view the moment it gains focus (not
+                // just the caret line) — which is what was yanking the title
+                // out of view on a plain tap even after the rect-measurement
+                // fix above. We can't reliably prevent that native jump, so we
+                // undo it instead: once focus settles, snap the paper back to
+                // where it was, then let scrollCaretIntoView() decide fresh
+                // whether any scroll is genuinely needed.
+                const paperCanvas = document.getElementById('paperCanvas');
+                let scrollTopBeforeFocus = null;
+                this.editorArea.addEventListener('pointerdown', () => {
+                    if (document.activeElement !== this.editorArea) {
+                        scrollTopBeforeFocus = paperCanvas.scrollTop;
+                    }
+                });
+
                 this.editorArea.addEventListener('focus', () => {
                     // Give the keyboard-open animation time to finish before measuring.
-                    setTimeout(() => this.scrollCaretIntoView(), 300);
+                    setTimeout(() => {
+                        if (scrollTopBeforeFocus !== null) {
+                            paperCanvas.scrollTop = scrollTopBeforeFocus;
+                            scrollTopBeforeFocus = null;
+                        }
+                        this.scrollCaretIntoView();
+                    }, 300);
                 });
 
                 // Applies the pending font style to freshly typed characters.
@@ -102,25 +139,6 @@
                 });
 
                 this.updateFontIndicator();
-            },
-
-            // Shrinks #appRoot (and the settings page) to the real visible height
-            // reported by visualViewport, instead of the fixed 100vh/h-screen that
-            // ignores the on-screen keyboard.
-            applyViewportHeightFix() {
-                if (!window.visualViewport) return;
-                const h = `${window.visualViewport.height}px`;
-                const appRoot = document.getElementById('appRoot');
-                const settingsModal = document.getElementById('settingsModal');
-                // Resize <body> in lockstep with #appRoot. Previously only appRoot
-                // was shrunk here while <body> kept its full (keyboard-ignoring)
-                // height, so body's own background showed through as a beige/
-                // yellow strip below the paper, and it re-flowed on every resize
-                // tick (the "loncat-loncat" jump). Keeping both in sync removes
-                // the gap entirely.
-                document.body.style.height = h;
-                if (appRoot) appRoot.style.height = h;
-                if (settingsModal) settingsModal.style.height = h;
             },
 
             // Keeps the text caret visible above the keyboard by scrolling
