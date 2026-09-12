@@ -10,7 +10,7 @@
             // below can't silently drift out of sync with the CSS if either
             // one is changed later without updating the other.
             FONT_SIZE_MULTIPLIER: {
-                'font-typewriter': 1,
+                'font-typewriter': 1.05, // Indie Flower — see .font-typewriter in styles.css
                 'font-handwriting': 1.2,
                 'font-cursive': 1.15
             },

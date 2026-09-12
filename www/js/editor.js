@@ -138,6 +138,16 @@
                     moreDropdown.classList.add('hidden');
                 });
 
+                // "Salin Semua" — one-tap copy of the whole note (title +
+                // body) to the clipboard. Tries the modern async Clipboard
+                // API first; some Android WebView builds don't expose it
+                // (or refuse it outside a "secure context"), so a hidden
+                // textarea + execCommand('copy') fallback covers those.
+                document.getElementById('btnCopyAll').addEventListener('click', () => {
+                    moreDropdown.classList.add('hidden');
+                    this.copyAllText();
+                });
+
                 this.updateFontIndicator();
             },
 
@@ -189,10 +199,34 @@
 
                 const paperCanvas = document.getElementById('paperCanvas');
                 if (rect.bottom > visibleBottom - margin) {
-                    paperCanvas.scrollTop += (rect.bottom - (visibleBottom - margin));
+                    this.forceScrollTop(paperCanvas, paperCanvas.scrollTop + (rect.bottom - (visibleBottom - margin)));
                 } else if (rect.top < visibleTop + margin) {
-                    paperCanvas.scrollTop -= (visibleTop + margin - rect.top);
+                    this.forceScrollTop(paperCanvas, paperCanvas.scrollTop - (visibleTop + margin - rect.top));
                 }
+            },
+
+            // Sets #paperCanvas.scrollTop to an absolute target and
+            // reasserts that same target for a few more animation frames.
+            // Why: if the caret-follow check above runs right as the user's
+            // manual scroll gesture is still decelerating (finger already
+            // lifted, WebView still coasting on inertia), a single
+            // synchronous scrollTop write gets silently overwritten by the
+            // next inertia tick a moment later — visually indistinguishable
+            // from the auto-scroll not having run at all, which is exactly
+            // the "ngetik lagi tapi layar nggak ngikutin" complaint. `target`
+            // is a fixed point in the document's own scroll coordinates
+            // (not relative to whatever the current scrollTop happens to be
+            // mid-momentum), so reapplying it for a few more frames is safe
+            // and just lets our correction "win" once the residual
+            // momentum dies down — typically within 5-6 frames (~90ms).
+            forceScrollTop(el, target) {
+                let frames = 0;
+                const reassert = () => {
+                    el.scrollTop = target;
+                    frames++;
+                    if (frames < 6) requestAnimationFrame(reassert);
+                };
+                reassert();
             },
 
             loadNote(noteId) {
@@ -414,6 +448,50 @@
                 }
 
                 StorageModule.saveNotes(notes);
+            },
+
+            // Copies the current note's title + body as plain text in one
+            // tap. innerText (not innerHTML/textContent) is used so line
+            // breaks between paragraphs/headings come through the way they
+            // visually read on the paper, instead of one run-on line.
+            async copyAllText() {
+                const title = this.titleInput.value.trim();
+                const body = this.editorArea.innerText.trim();
+                const fullText = title ? `${title}\n\n${body}` : body;
+
+                if (!fullText) {
+                    UIModule.showToast('Catatan masih kosong');
+                    return;
+                }
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(fullText);
+                        UIModule.showToast('Semua teks disalin');
+                        return;
+                    }
+                    throw new Error('Clipboard API unavailable');
+                } catch (e) {
+                    // Fallback for WebViews without (or refusing) the
+                    // Clipboard API: a temporary offscreen textarea + the
+                    // legacy execCommand('copy').
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = fullText;
+                        ta.style.position = 'fixed';
+                        ta.style.top = '-9999px';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        UIModule.showToast('Semua teks disalin');
+                    } catch (fallbackErr) {
+                        console.error('Copy all failed', fallbackErr);
+                        UIModule.showToast('Gagal menyalin teks');
+                    }
+                }
             },
 
             deleteCurrentNote() {
