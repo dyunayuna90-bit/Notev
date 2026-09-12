@@ -3,7 +3,7 @@
 // completely offline after the first successful load. Bump CACHE_NAME any
 // time you change a cached file's content — that's what forces old clients
 // to fetch the new version instead of serving a stale cached copy forever.
-const CACHE_NAME = 'vinote-cache-v1';
+const CACHE_NAME = 'vinote-cache-v2';
 
 // Local app-shell files. These are fetched and cached individually (not via
 // cache.addAll) so that ONE missing/renamed file — e.g. an icon you haven't
@@ -33,7 +33,7 @@ const APP_SHELL = [
 // point at the local copies, so the APK never depends on this list at all.
 const CDN_SHELL = [
     'https://cdn.tailwindcss.com',
-    'https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Cinzel:wght@600;700;800&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@500;700&family=Special+Elite&display=swap'
+    'https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Cinzel:wght@600;700;800&family=Dancing+Script:wght@500;700&family=Indie+Flower&display=swap'
 ];
 
 self.addEventListener('install', (event) => {
