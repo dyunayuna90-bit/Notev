@@ -1,0 +1,7 @@
+{
+  "appId": "com.vinote.app",
+  "appName": "Vinote",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#f4ebd0"
+}
