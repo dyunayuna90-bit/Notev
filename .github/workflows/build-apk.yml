@@ -1,0 +1,195 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Dependencies
+        run: npm install
+
+      # ================================================================
+      # Precompile Tailwind into a static, offline CSS file so the APK
+      # never depends on the Tailwind CDN script at runtime. Only used for
+      # this native build — the repo's own www/index.html keeps the CDN
+      # script for plain browser/PWA use.
+      # ================================================================
+      - name: Build Offline Tailwind CSS
+        run: npx tailwindcss -c tailwind.config.js -i www/css/tailwind-input.css -o www/css/tailwind.compiled.css --minify
+
+      # ================================================================
+      # Copy the vintage/handwriting Google Fonts (Caveat, Cinzel, Courier
+      # Prime, Dancing Script, Special Elite) from node_modules into
+      # www/libs/fonts, so the APK never fetches them from
+      # fonts.googleapis.com at runtime either. Each family's per-weight
+      # CSS files are concatenated into one all.css, with the actual woff2
+      # files copied alongside so their relative url(./files/...) paths
+      # keep resolving correctly.
+      # ================================================================
+      - name: Copy Offline Fonts (Caveat, Cinzel, Courier Prime, Dancing Script, Special Elite)
+        run: |
+          for family in caveat cinzel courier-prime dancing-script special-elite; do
+            mkdir -p "www/libs/fonts/$family"
+            cp -r "node_modules/@fontsource/$family/files" "www/libs/fonts/$family/files"
+            cat node_modules/@fontsource/$family/*.css > "www/libs/fonts/$family/all.css"
+          done
+
+          echo "=== Isi www/libs/fonts setelah copy ==="
+          find www/libs/fonts -maxdepth 2
+
+      # ================================================================
+      # Rewrite the CDN <script>/<link> tags in www/index.html to point at
+      # the locally-bundled Tailwind CSS and fonts above, so the packaged
+      # APK works with zero internet connection, even on first launch.
+      # This edits the file that gets copied into the Android project by
+      # `cap sync` below — it does NOT modify what's committed to the repo.
+      # ================================================================
+      - name: Patch index.html to Use Offline Assets
+        run: |
+          python3 << 'PYEOF'
+          import re
+
+          path = "www/index.html"
+          with open(path, "r", encoding="utf-8") as f:
+              html = f.read()
+
+          # Replace the Google Fonts preconnect + stylesheet <link> tags with
+          # local stylesheet links for each bundled font family.
+          font_families = ["caveat", "cinzel", "courier-prime", "dancing-script", "special-elite"]
+          local_font_links = "\n".join(
+              f'    <link rel="stylesheet" href="libs/fonts/{fam}/all.css">' for fam in font_families
+          )
+          html = re.sub(
+              r'\s*<link rel="preconnect" href="https://fonts\.googleapis\.com">\s*'
+              r'<link rel="preconnect" href="https://fonts\.gstatic\.com" crossorigin>\s*'
+              r'<link href="https://fonts\.googleapis\.com/css2\?[^"]*" rel="stylesheet">',
+              "\n" + local_font_links,
+              html,
+          )
+
+          # Replace the Tailwind CDN <script> + config <script> with the
+          # precompiled offline stylesheet.
+          html = html.replace(
+              '<script src="https://cdn.tailwindcss.com"></script>\n'
+              '    <script src="js/tailwind-config.js"></script>',
+              '<link rel="stylesheet" href="css/tailwind.compiled.css">',
+          )
+
+          with open(path, "w", encoding="utf-8") as f:
+              f.write(html)
+
+          print("=== Patched www/index.html (head) ===")
+          print("\n".join(html.splitlines()[:35]))
+          PYEOF
+
+      # ================================================================
+      # Generate the web/PWA icon sizes (manifest.json + <link rel=icon>)
+      # straight from the one file you maintain: assets/icon.png. ImageMagick
+      # ships preinstalled on GitHub's ubuntu-latest runners, so no extra
+      # dependency is needed for this. The maskable icon adds ~20% padding,
+      # since Android can crop a maskable icon into a circle/squircle and a
+      # full-bleed image would get its edges clipped off.
+      # ================================================================
+      - name: Generate PWA Icon Sizes from assets/icon.png
+        run: |
+          mkdir -p www/icons
+          convert assets/icon.png -resize 192x192 www/icons/icon-192.png
+          convert assets/icon.png -resize 512x512 www/icons/icon-512.png
+          convert assets/icon.png -resize 410x410 -gravity center -background "#f4ebd0" -extent 512x512 www/icons/icon-maskable-512.png
+
+      - name: Commit Generated PWA Icons Back to Repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto-generate PWA icons from assets/icon.png [skip ci]"
+          file_pattern: "www/icons/*.png"
+
+      - name: Initialize Capacitor Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Sync Version & Force True Immersive Fullscreen (Notch-Safe)
+        run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          APP_CODE=$(echo $APP_VERSION | sed 's/\.//g')
+
+          sed -i -E "s/versionCode [0-9]+/versionCode $APP_CODE/g" android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]+\"/versionName \"$APP_VERSION\"/g" android/app/build.gradle
+
+          # !!! Must match "appId" in capacitor.config.json exactly !!!
+          PKG_PATH=$(echo "com.vinote.app" | tr '.' '/')
+          mkdir -p android/app/src/main/java/$PKG_PATH
+          cat << 'EOF' > android/app/src/main/java/$PKG_PATH/MainActivity.java
+          package com.vinote.app;
+          import android.os.Bundle;
+          import android.view.WindowManager;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  // Render content behind the notch/camera cutout instead of
+                  // letterboxing around it (paired with the CSS
+                  // env(safe-area-inset-*) padding in styles.css so the
+                  // actual UI still avoids sitting under the cutout).
+                  if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                      getWindow().getAttributes().layoutInDisplayCutoutMode =
+                          WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                  }
+
+                  // True immersive fullscreen: status bar & nav bar hidden,
+                  // swipe-from-edge reveals them temporarily.
+                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                  WindowInsetsControllerCompat controller =
+                      new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+                  controller.hide(WindowInsetsCompat.Type.systemBars());
+                  controller.setSystemBarsBehavior(
+                      WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                  );
+              }
+          }
+          EOF
+
+      - name: Download Permanent Keystore
+        run: |
+          wget https://raw.githubusercontent.com/expo/expo/main/templates/expo-template-bare-minimum/android/app/debug.keystore -O debug.keystore
+
+      - name: Generate Android Icons (from assets/icon.png)
+        run: npx @capacitor/assets generate --android
+
+      - name: Build APK (Gradle)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug -Pandroid.injected.signing.store.file=${{ github.workspace }}/debug.keystore -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vinote-App-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
