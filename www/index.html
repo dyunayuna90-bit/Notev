@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>Vinote - Aplikasi Catatan Vintage</title>
+
+    <!-- PWA: installability + native-like chrome -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8c3a2b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vinote">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" href="icons/icon-192.png">
+
+    <!-- Google Fonts Vintage & Handwriting -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Cinzel:wght@600;700;800&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN + theme config
+         NOTE: for the native Android build, the GitHub Actions workflow
+         rewrites this line (and the Google Fonts <link> above) to point at
+         locally-bundled, offline copies before packaging the APK — see
+         .github/workflows/build-apk.yml. Left as CDN links here so the app
+         also runs as a plain PWA straight from this repo. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tailwind-config.js"></script>
+
+    <!-- App styles (everything that used to be an inline <style> block) -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-vintage-base text-vintage-dark font-typewriter h-screen flex flex-col justify-between relative overflow-x-hidden">
+
+    <!-- Optional Aged Paper Overlay -->
+    <div id="agedPaperOverlay" class="paper-aged-effect hidden"></div>
+
+    <!-- Optional Eye Protection (warm amber filter) Overlay -->
+    <div id="eyeProtectionOverlay" class="eye-protection-overlay hidden"></div>
+
+    <!-- MAIN APP STRUCTURE CONTAINER -->
+    <div id="appRoot" class="w-full h-screen flex flex-col relative overflow-hidden">
+
+        <!-- VIEW 1: NOTES LIST VIEW (Full width dashboard) -->
+        <section id="viewNotesList" class="flex-1 flex flex-col h-full overflow-y-auto relative">
+            <!-- Header List View: Default mode (search + select + settings) -->
+            <header id="headerDefault" class="bg-vintage-card border-b-2 border-vintage-dark px-3 py-2.5 sticky top-0 z-30 shadow-md flex items-center gap-2">
+                <div class="relative flex-1 min-w-0">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-vintage-muted pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                    <input type="text" id="searchInput" placeholder="Cari catatan..." class="w-full bg-vintage-paper border-2 border-vintage-dark pl-9 pr-3 py-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-vintage-accent/40">
+                </div>
+                <button id="btnToggleSelect" class="btn-retro p-2.5 bg-vintage-paper rounded-full shrink-0" title="Pilih catatan">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                </button>
+                <button id="btnOpenSettings" class="btn-retro p-2.5 bg-vintage-paper rounded-full shrink-0" title="Pengaturan">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                </button>
+            </header>
+
+            <!-- Header List View: Batch selection mode -->
+            <header id="headerSelection" class="hidden bg-vintage-dark text-vintage-paper px-3 py-2.5 sticky top-0 z-30 shadow-md items-center justify-between gap-2">
+                <div class="flex items-center gap-1 min-w-0">
+                    <button id="btnCancelSelect" class="p-2 hover:bg-white/10 active:bg-white/20 rounded-full shrink-0" title="Batal pilih">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                    <span id="selectionCount" class="font-bold text-sm truncate">0 dipilih</span>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button id="btnPinSelected" class="p-2 hover:bg-white/10 active:bg-white/20 rounded-full opacity-40 transition-opacity" title="Sematkan / lepas sematan">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
+                    </button>
+                    <button id="btnDeleteSelected" class="p-2 hover:bg-white/10 active:bg-white/20 rounded-full opacity-40 transition-opacity" title="Hapus catatan terpilih">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
+                </div>
+            </header>
+
+            <div class="p-4 max-w-5xl w-full mx-auto flex-1 flex flex-col pb-28">
+                <!-- Pinned Section -->
+                <div id="pinnedSection" class="hidden mb-5">
+                    <div class="flex items-center gap-1.5 mb-2 px-0.5">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="text-vintage-accent"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
+                        <h2 class="text-[11px] font-bold uppercase tracking-wider text-vintage-muted">Disematkan</h2>
+                    </div>
+                    <div id="pinnedContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- "All notes" label (only shown once there's a Pinned section above it) -->
+                <div id="allNotesLabel" class="hidden mb-2 px-0.5">
+                    <h2 class="text-[11px] font-bold uppercase tracking-wider text-vintage-muted">Semua Catatan</h2>
+                </div>
+
+                <!-- Notes Grid Container -->
+                <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Notes injected here -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-vintage-border rounded-lg my-12">
+                    <p class="font-title text-lg font-bold text-vintage-muted">Belum ada catatan tersemat.</p>
+                    <p class="text-xs text-vintage-muted mt-1">Tekan tombol + untuk mulai membuat lembaran baru.</p>
+                </div>
+            </div>
+
+            <!-- Floating Action Button: New Note -->
+            <button id="btnNewNote" class="fixed bottom-6 right-5 z-40 w-14 h-14 rounded-full bg-vintage-accent text-white border-2 border-vintage-dark shadow-2xl flex items-center justify-center active:scale-90 transition-transform" title="Tulis Catatan Baru">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+        </section>
+
+        <!-- VIEW 2: FULL-SCREEN NOTE EDITOR VIEW -->
+        <section id="viewEditor" class="hidden flex-1 flex flex-col w-full h-full absolute inset-0 z-40 bg-vintage-paper overflow-hidden">
+            <!-- Floating "More" Menu: replaces the old editor header entirely.
+                 Just the three-dot glyph floats over the paper — no button
+                 chrome, no bar/background behind it — and it opens a small
+                 menu bundling Undo, Redo, and Hapus Catatan so they don't
+                 eat up screen space as separate always-visible buttons.
+                 Notes autosave on every edit and on back-navigation, so
+                 there's no separate Simpan/Close button here; the Android
+                 hardware back button (handled in NavigationModule) is what
+                 exits the editor. -->
+            <div class="fixed top-2 right-2 z-20">
+                <button id="btnEditorMoreMenu" class="p-2 text-vintage-dark/70 hover:text-vintage-dark" title="Menu Lainnya">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
+                </button>
+
+                <div id="editorMoreDropdown" class="hidden absolute top-full right-0 mt-1 w-44 bg-vintage-card border-2 border-vintage-dark rounded-md shadow-2xl z-50 p-1 space-y-1">
+                    <button id="btnUndo" class="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-bold hover:bg-vintage-paper rounded" title="Undo (Urungkan)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+                        <span>Undo</span>
+                    </button>
+                    <button id="btnRedo" class="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-bold hover:bg-vintage-paper rounded" title="Redo (Ulangi)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>
+                        <span>Redo</span>
+                    </button>
+                    <div class="border-t border-vintage-border my-1"></div>
+                    <button id="btnViewMode" class="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-bold hover:bg-vintage-paper rounded" title="Lihat Penuh (tanpa menu &amp; kursor)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <span>Lihat Penuh</span>
+                    </button>
+                    <div class="border-t border-vintage-border my-1"></div>
+                    <button id="btnDeleteNote" class="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-bold text-vintage-accent hover:bg-vintage-paper rounded" title="Hapus Catatan">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        <span>Hapus Catatan</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Full Screen Paper Canvas Area -->
+            <div id="paperCanvas" class="flex-1 w-full h-full overflow-y-auto theme-vintage p-4 md:p-10 pt-12 md:pt-14 flex flex-col transition-all">
+                <!-- Title Input -->
+                <input type="text" id="noteTitleInput" placeholder="Judul Catatan..." class="w-full max-w-4xl mx-auto bg-transparent font-title text-2xl md:text-3xl font-bold border-b-2 border-vintage-border pb-2 mb-4 focus:outline-none text-vintage-dark placeholder-vintage-muted/60">
+
+                <!-- Rich Text Wide Editable Canvas -->
+                <div id="editorArea" class="editable-area flex-1 w-full max-w-4xl mx-auto min-h-[400px] pb-56 focus:outline-none" contenteditable="true" spellcheck="false" placeholder="Tuliskan catatan vintage Anda di sini..."></div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Floating Context Selection Bubble Toolbar -->
+    <div id="selectionBubble" class="fixed hidden z-50 bg-vintage-dark text-vintage-paper border-2 border-vintage-dark shadow-2xl rounded-md p-1 text-xs">
+        <!-- Page 1: Default compact actions (icon-only for maximum compactness) -->
+        <div id="bubblePageDefault" class="flex items-center space-x-0.5">
+            <button id="bubbleCut" class="p-1.5 hover:bg-vintage-muted rounded" title="Potong">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+            </button>
+            <button id="bubbleCopy" class="p-1.5 hover:bg-vintage-muted rounded" title="Salin">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+            <button id="bubblePaste" class="p-1.5 hover:bg-vintage-muted rounded" title="Tempel">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg>
+            </button>
+            <button id="bubbleSelectAll" class="p-1.5 hover:bg-vintage-muted rounded" title="Pilih Semua">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18-5h-3a2 2 0 00-2 2v3M3 16v3a2 2 0 002 2h3m11-5v3a2 2 0 01-2 2h-3"/></svg>
+            </button>
+            <span class="w-px h-4 bg-vintage-muted"></span>
+            <button id="bubbleBold" class="px-2 py-1 hover:bg-vintage-muted rounded font-bold">B</button>
+            <button id="bubbleItalic" class="px-2 py-1 hover:bg-vintage-muted rounded italic">I</button>
+            <button id="bubbleH1" class="px-2 py-1 hover:bg-vintage-muted rounded font-bold">H1</button>
+            <button id="bubbleH2" class="px-2 py-1 hover:bg-vintage-muted rounded font-bold">H2</button>
+            <span class="w-px h-4 bg-vintage-muted"></span>
+            <button id="bubbleFontPageToggle" class="px-1.5 py-1 hover:bg-vintage-muted rounded" title="Gaya Font & Stabilo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
+
+        <!-- Page 2: Font style + highlight options (collapsed by default, opened via the ">" button) -->
+        <div id="bubblePageFont" class="hidden items-center space-x-1">
+            <button id="bubbleFontPageBack" class="px-1.5 py-1 hover:bg-vintage-muted rounded" title="Kembali">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="w-px h-4 bg-vintage-muted"></span>
+            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter" title="Mesin Tik">Tik</button>
+            <button data-bubble-font="font-handwriting" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting" title="Tulisan Tangan">Tangan</button>
+            <button data-bubble-font="font-cursive" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-cursive" title="Sambung">Sambung</button>
+            <span class="w-px h-4 bg-vintage-muted"></span>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#fde047" title="Stabilo Kuning" style="background-color:#fde047"></button>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#f9a8d4" title="Stabilo Pink" style="background-color:#f9a8d4"></button>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#86efac" title="Stabilo Hijau" style="background-color:#86efac"></button>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper bg-vintage-dark flex items-center justify-center" data-color="transparent" title="Hapus Stabilo">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Full-Screen Page (not a modal popup) -->
+    <section id="settingsModal" class="hidden flex-1 flex flex-col w-full h-full fixed inset-0 z-50 bg-vintage-base overflow-hidden">
+        <!-- Full Screen Settings Header -->
+        <header class="bg-vintage-card border-b-2 border-vintage-dark px-3 py-2 flex items-center gap-3 shrink-0 shadow-sm z-10">
+            <button id="btnCloseSettings" class="p-2 bg-vintage-paper border border-vintage-dark rounded hover:bg-vintage-base" title="Kembali">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 class="font-title text-lg font-bold">Pengaturan</h2>
+        </header>
+
+        <!-- Scrollable Settings Content -->
+        <div class="flex-1 w-full h-full overflow-y-auto">
+            <div class="max-w-md mx-auto pb-10">
+
+                <!-- Live Paper Preview. Sticky so it stays visible while the
+                     user scrolls down to the sliders further below — the
+                     whole point is being able to watch it react without
+                     opening a note. Sits flush against the header above
+                     (no padding gap) so the two visually read as one
+                     continuous block, even though they're separate
+                     elements. The outer box (#settingsPreviewWrap) has a
+                     FIXED width/height and never resizes; only the sample
+                     text's own font-size/line-height/letter-spacing change,
+                     driven by the exact same settings state (and even the
+                     exact same CSS classes/variables) as the real editor,
+                     so what's shown here is pixel-accurate to the note. -->
+                <div class="sticky top-0 z-10 bg-vintage-base pt-3 pb-3 px-4">
+                    <h3 class="font-bold text-[11px] uppercase text-vintage-muted tracking-wider mb-2">Pratinjau</h3>
+                    <div id="settingsPreviewWrap" class="relative w-full h-44 rounded-xl border-2 border-vintage-dark overflow-hidden shadow-inner">
+                        <div id="settingsPreviewPaper" class="theme-vintage w-full h-full overflow-hidden p-4">
+                            <div id="settingsPreviewTextOuter"><span id="settingsPreviewText" class="font-typewriter">Untuk Dinda Aisyah, cintaku. Pahami saja, kertas ini tak akan berarti tanpa ada namamu menghiasinya. Makasih sudah jadi bagian paling indah di hari-hariku.</span></div>
+                        </div>
+                        <div id="settingsPreviewAged" class="paper-aged-effect-preview hidden"></div>
+                    </div>
+                </div>
+
+                <div class="px-4 space-y-5">
+
+                <!-- Kertas -->
+                <div>
+                    <h3 class="font-bold text-[11px] uppercase text-vintage-muted tracking-wider mb-2 px-1">Kertas</h3>
+                    <div class="settings-card">
+                        <div class="settings-row-body">
+                            <div class="grid grid-cols-2 gap-2">
+                                <label id="paperVintageLabel" class="flex items-center justify-center space-x-2 bg-vintage-paper p-2.5 rounded-lg border-2 border-vintage-accent cursor-pointer">
+                                    <input type="radio" name="paperStyle" value="vintage" id="paperVintage" class="accent-vintage-accent" checked>
+                                    <span class="text-xs font-bold">Vintage</span>
+                                </label>
+                                <label id="paperWhiteLabel" class="flex items-center justify-center space-x-2 bg-white p-2.5 rounded-lg border-2 border-transparent cursor-pointer text-black">
+                                    <input type="radio" name="paperStyle" value="white" id="paperWhite" class="accent-vintage-accent">
+                                    <span class="text-xs font-bold">Putih</span>
+                                </label>
+                            </div>
+                        </div>
+                        <label class="settings-row cursor-pointer">
+                            <span class="text-xs font-bold">Kertas Bergaris</span>
+                            <span class="toggle-switch">
+                                <input type="checkbox" id="togglePaperLines">
+                                <span class="toggle-track"></span>
+                            </span>
+                        </label>
+                        <!-- Its own derived value, separate from "Spasi
+                             Baris" below — the paper's ruled-line spacing
+                             and the text's own line-height are independent
+                             things (e.g. fitting 2 lines of text per ruled
+                             line on purpose), not one value forced to match
+                             the other. No longer a free slider — see
+                             applySettingsToDOM's computeRuledLineSpacing():
+                             this now always equals the text's actual
+                             rendered line pitch (font size × font's own
+                             multiplier × line-height), so every line always
+                             falls exactly on a rule. -->
+                        <div id="ruledLineSpacingGroup" class="settings-row-body hidden">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-vintage-muted">Jarak garis</span>
+                                <span id="valRuledLineSpacing" class="font-bold">36px</span>
+                            </div>
+                            <p class="text-[10px] text-vintage-muted">Mengikuti ukuran &amp; spasi huruf otomatis.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teks -->
+                <div>
+                    <h3 class="font-bold text-[11px] uppercase text-vintage-muted tracking-wider mb-2 px-1">Teks</h3>
+                    <div class="settings-card">
+                        <div class="settings-row-body">
+                            <div class="text-xs font-bold mb-1.5">Gaya Font</div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button data-font="font-typewriter" class="btnFontOption px-2 py-2 text-xs font-typewriter bg-vintage-paper border border-vintage-border rounded-lg text-center">Mesin Tik</button>
+                                <button data-font="font-handwriting" class="btnFontOption px-2 py-2 text-sm font-handwriting bg-vintage-paper border border-vintage-border rounded-lg text-center">Tulisan Tangan</button>
+                                <button data-font="font-cursive" class="btnFontOption px-2 py-2 text-sm font-cursive bg-vintage-paper border border-vintage-border rounded-lg text-center">Sambung</button>
+                            </div>
+                        </div>
+                        <div class="settings-row-body">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-bold">Ukuran Huruf</span>
+                                <span id="valFontSize" class="font-bold text-vintage-accent">18px</span>
+                            </div>
+                            <input type="range" id="sliderFontSize" min="14" max="32" value="18" class="w-full accent-vintage-accent">
+                        </div>
+                        <div class="settings-row-body">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-bold">Spasi Baris</span>
+                                <span id="valLineHeight" class="font-bold text-vintage-accent">1.8×</span>
+                            </div>
+                            <input type="range" id="sliderLineHeight" min="1.2" max="2.6" step="0.05" value="1.8" class="w-full accent-vintage-accent">
+                        </div>
+                        <div class="settings-row-body">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-bold">Jarak Huruf</span>
+                                <span id="valLetterSpacing" class="font-bold text-vintage-accent">0px</span>
+                            </div>
+                            <input type="range" id="sliderLetterSpacing" min="0" max="4" step="0.5" value="0" class="w-full accent-vintage-accent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Efek & Kenyamanan -->
+                <div>
+                    <h3 class="font-bold text-[11px] uppercase text-vintage-muted tracking-wider mb-2 px-1">Efek &amp; Kenyamanan</h3>
+                    <div class="settings-card">
+                        <label class="settings-row cursor-pointer">
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold block">Efek Kertas Tua</span>
+                                <span class="text-[10px] text-vintage-muted">Noda usang &amp; tekstur serat kertas</span>
+                            </div>
+                            <span class="toggle-switch">
+                                <input type="checkbox" id="toggleAgedPaper">
+                                <span class="toggle-track"></span>
+                            </span>
+                        </label>
+                        <label class="settings-row cursor-pointer">
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold block">Mode Perlindungan Mata</span>
+                                <span class="text-[10px] text-vintage-muted">Lapisan oren hangat, lebih nyaman di mata</span>
+                            </div>
+                            <span class="toggle-switch">
+                                <input type="checkbox" id="toggleEyeProtection">
+                                <span class="toggle-track"></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Data -->
+                <div>
+                    <h3 class="font-bold text-[11px] uppercase text-vintage-muted tracking-wider mb-2 px-1">Data</h3>
+                    <div class="settings-card">
+                        <div class="settings-row-body grid grid-cols-2 gap-2">
+                            <button id="btnExportData" class="btn-retro p-2.5 bg-vintage-paper font-bold text-xs rounded-lg text-center">
+                                Ekspor
+                            </button>
+                            <button id="btnImportData" class="btn-retro p-2.5 bg-vintage-paper font-bold text-xs rounded-lg text-center">
+                                Impor
+                            </button>
+                            <input type="file" id="importFileInput" accept=".json" class="hidden">
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-vintage-dark text-vintage-paper px-4 py-2 rounded border border-vintage-border text-xs shadow-xl hidden">
+        <span id="toastMessage">Pesan Notifikasi</span>
+    </div>
+
+
+    <!-- App scripts, in dependency order. Kept as plain <script> tags (no
+         bundler/build step needed) so this still runs by just opening
+         index.html, exactly like the old single-file version did. -->
+    <script src="js/storage.js"></script>
+    <script src="js/undo-redo.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/bubble.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
