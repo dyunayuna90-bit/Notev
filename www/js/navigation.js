@@ -1,0 +1,86 @@
+// VINOTE — Module: Navigation (Popstate & Android Back Button)
+
+        // --- MODULE 3: NAVIGATION MODULE (Popstate & Android Back Button) ---
+        const NavigationModule = {
+            activeView: 'list', // 'list' | 'editor'
+            activeModal: false,
+
+            init() {
+                history.replaceState({ page: 'list' }, '', '');
+
+                // Listen to Android Hardware Back Button / Browser Popstate
+                window.addEventListener('popstate', (e) => {
+                    this.handlePopState(e.state);
+                });
+            },
+
+            openEditor(noteId = null) {
+                this.activeView = 'editor';
+                history.pushState({ page: 'editor', noteId }, '', '#editor');
+                UIModule.showEditorView(noteId);
+            },
+
+            closeEditor() {
+                if (this.activeView === 'editor') {
+                    this.activeView = 'list';
+                    UIModule.showNotesListView();
+                }
+            },
+
+            openSettings() {
+                this.activeModal = true;
+                history.pushState({ modal: 'settings' }, '', '#settings');
+                UIModule.toggleModal('settingsModal', true);
+            },
+
+            closeSettings() {
+                if (this.activeModal) {
+                    this.activeModal = false;
+                    UIModule.toggleModal('settingsModal', false);
+                }
+            },
+
+            handlePopState(state) {
+                // Priority 0: Exit batch selection mode on the home screen
+                if (UIModule.selectionMode) {
+                    UIModule.exitSelectionMode(true);
+                    return;
+                }
+
+                // Priority 1: Close Selection Bubble
+                if (!UIModule.bubbleElement.classList.contains('hidden')) {
+                    UIModule.hideBubble();
+                    return;
+                }
+
+                // Priority 2: Close Floating "More" Menu (Undo/Redo/Hapus)
+                const moreMenu = document.getElementById('editorMoreDropdown');
+                if (moreMenu && !moreMenu.classList.contains('hidden')) {
+                    moreMenu.classList.add('hidden');
+                    return;
+                }
+
+                // Priority 3: Close Settings Modal
+                if (this.activeModal) {
+                    this.activeModal = false;
+                    UIModule.toggleModal('settingsModal', false);
+                    return;
+                }
+
+                // Priority 3.5: Exit "Lihat Penuh" (full view) mode — stays
+                // on the same note, just restores the menu/caret.
+                if (UIModule.viewModeActive) {
+                    UIModule.exitNoteViewMode();
+                    return;
+                }
+
+                // Priority 4: Close Editor View
+                if (this.activeView === 'editor') {
+                    const noteId = EditorModule.currentNoteId;
+                    EditorModule.saveCurrentNote();
+                    this.activeView = 'list';
+                    UIModule.morphEditorToCard(noteId);
+                    return;
+                }
+            }
+        };
