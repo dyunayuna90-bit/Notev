@@ -164,7 +164,7 @@
                         ${selectionDot}
                         <div class="min-w-0 flex-1">
                             <h2 class="font-title text-base font-bold text-vintage-dark line-clamp-1 border-b border-vintage-border pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
-                            <p class="font-typewriter text-xs text-vintage-muted line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
+                            <p class="font-handwriting text-xs text-vintage-muted line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
                         </div>
                     </div>
                     <div class="flex justify-between items-center text-[10px] text-vintage-muted pt-2 border-t border-vintage-border/50">

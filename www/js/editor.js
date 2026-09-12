@@ -137,11 +137,30 @@
                 let rect = range.getBoundingClientRect();
 
                 // A collapsed range at an empty line (e.g. right after pressing
-                // Enter) can report an all-zero rect; fall back to the caret's
-                // containing element so we still have something to measure.
+                // Enter, or the very first tap into a blank note) reports an
+                // all-zero rect. This used to fall back to the FULL bounding
+                // box of the caret's containing element — but on an empty note
+                // that element is #editorArea itself, whose box includes its
+                // min-height (400px) and ~14rem of bottom padding reserved for
+                // the keyboard. That made `rect.bottom` land far below the
+                // actual caret line, so the code below thought the caret was
+                // off-screen and scrolled the paper down to "fix" it — which is
+                // exactly what was yanking the title out of view on a simple
+                // tap. Only the element's TOP is trustworthy here; synthesize a
+                // single-line-height rect from it instead of trusting its full,
+                // oversized box.
                 if (rect.width === 0 && rect.height === 0 && rect.top === 0 && rect.bottom === 0) {
                     const node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
-                    if (node && node.getBoundingClientRect) rect = node.getBoundingClientRect();
+                    if (node && node.getBoundingClientRect) {
+                        const nodeRect = node.getBoundingClientRect();
+                        const lineHeight = parseFloat(getComputedStyle(node).lineHeight) || 28;
+                        rect = {
+                            top: nodeRect.top,
+                            bottom: nodeRect.top + lineHeight,
+                            left: nodeRect.left,
+                            right: nodeRect.right
+                        };
+                    }
                 }
                 if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
 
