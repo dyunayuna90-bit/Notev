@@ -321,6 +321,18 @@
     top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
 }
 
+/* Extra breathing room above the note title itself — bigger and separate
+   from the kebab menu's own offset above, purely for aesthetics (an empty
+   "header" feel instead of the title sitting right under the notch/menu). */
+#paperCanvas {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+}
+@media (min-width: 768px) {
+    #paperCanvas {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 4rem);
+    }
+}
+
 /* The floating selection bubble is positioned in JS from
    getBoundingClientRect(), which already accounts for the viewport, but on a
    landscape device with a side notch it can still start flush against the
