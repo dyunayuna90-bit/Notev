@@ -31,7 +31,7 @@ jobs:
       # ================================================================
       # Precompile Tailwind into a static, offline CSS file so the APK
       # never depends on the Tailwind CDN script at runtime. Only used for
-      # this native build — the repo's own www/index.html keeps the CDN
+      # this native build â€” the repo's own www/index.html keeps the CDN
       # script for plain browser/PWA use.
       # ================================================================
       - name: Build Offline Tailwind CSS
@@ -62,7 +62,7 @@ jobs:
       # the locally-bundled Tailwind CSS and fonts above, so the packaged
       # APK works with zero internet connection, even on first launch.
       # This edits the file that gets copied into the Android project by
-      # `cap sync` below — it does NOT modify what's committed to the repo.
+      # `cap sync` below â€” it does NOT modify what's committed to the repo.
       # ================================================================
       - name: Patch index.html to Use Offline Assets
         run: |
@@ -112,6 +112,7 @@ jobs:
       # ================================================================
       - name: Generate PWA Icon Sizes from assets/icon.png
         run: |
+          sudo apt-get update && sudo apt-get install -y imagemagick
           mkdir -p www/icons
           convert assets/icon.png -resize 192x192 www/icons/icon-192.png
           convert assets/icon.png -resize 512x512 www/icons/icon-512.png
