@@ -289,11 +289,36 @@
    ========================================================================== */
 #appRoot,
 #settingsModal {
-    padding-top: env(safe-area-inset-top, 0px);
+    /* padding-top intentionally NOT set here anymore — #appRoot and
+       #settingsModal have no background of their own, so padding-top on them
+       just exposed <body>'s background color in the notch/status-bar strip
+       above the header (a different shade than the header itself, which is
+       exactly the "header terpotong" bug). The safe-area top inset is now
+       added to each screen's own header below instead, so the header's own
+       background is what extends into that strip. */
     padding-bottom: env(safe-area-inset-bottom, 0px);
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
     box-sizing: border-box;
+}
+
+/* Each screen's sticky/fixed header now owns the top safe-area inset itself
+   (added on top of its existing Tailwind py-* padding, not replacing it) so
+   its background reaches the true top of the screen instead of leaving a
+   gap. */
+#headerDefault,
+#headerSelection {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.625rem);
+}
+#headerSettings {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+}
+
+/* Editor's floating "more" (kebab) menu — nudged down by the safe-area inset
+   plus a bit extra so it clears the notch/status bar instead of sitting
+   flush against it. */
+.editor-more-menu-wrap {
+    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
 }
 
 /* The floating selection bubble is positioned in JS from
