@@ -121,7 +121,7 @@
                  there's no separate Simpan/Close button here; the Android
                  hardware back button (handled in NavigationModule) is what
                  exits the editor. -->
-            <div class="fixed top-2 right-2 z-20">
+            <div class="fixed editor-more-menu-wrap right-2 z-20">
                 <button id="btnEditorMoreMenu" class="p-2 text-vintage-dark/70 hover:text-vintage-dark" title="Menu Lainnya">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
                 </button>
@@ -193,9 +193,9 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
             <span class="w-px h-4 bg-vintage-muted"></span>
-            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter" title="Mesin Tik">Tik</button>
-            <button data-bubble-font="font-handwriting" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting" title="Tulisan Tangan">Tangan</button>
-            <button data-bubble-font="font-cursive" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-cursive" title="Sambung">Sambung</button>
+            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter" title="Mesin Tik">Ab</button>
+            <button data-bubble-font="font-handwriting" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting" title="Tulisan Tangan">Ab</button>
+            <button data-bubble-font="font-cursive" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-cursive" title="Sambung">Ab</button>
             <span class="w-px h-4 bg-vintage-muted"></span>
             <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#fde047" title="Stabilo Kuning" style="background-color:#fde047"></button>
             <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#f9a8d4" title="Stabilo Pink" style="background-color:#f9a8d4"></button>
@@ -209,7 +209,7 @@
     <!-- Settings Full-Screen Page (not a modal popup) -->
     <section id="settingsModal" class="hidden flex-1 flex flex-col w-full h-full fixed inset-0 z-50 bg-vintage-base overflow-hidden">
         <!-- Full Screen Settings Header -->
-        <header class="bg-vintage-card border-b-2 border-vintage-dark px-3 py-2 flex items-center gap-3 shrink-0 shadow-sm z-10">
+        <header id="headerSettings" class="bg-vintage-card border-b-2 border-vintage-dark px-3 py-2 flex items-center gap-3 shrink-0 shadow-sm z-10">
             <button id="btnCloseSettings" class="p-2 bg-vintage-paper border border-vintage-dark rounded hover:bg-vintage-base" title="Kembali">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </button>
