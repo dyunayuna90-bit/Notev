@@ -12,9 +12,7 @@
             FONT_SIZE_MULTIPLIER: {
                 'font-typewriter': 1.05, // Indie Flower — see .font-typewriter in styles.css
                 'font-handwriting': 1.2,
-                'font-cursive': 1.15,
-                'font-handwriting2': 1.02, // Patrick Hand — see .font-handwriting2 in styles.css
-                'font-handwriting3': 1.1   // Architects Daughter — see .font-handwriting3 in styles.css
+                'font-cursive': 1.15
             },
 
             // The ruled-line pitch a note's DEFAULT font actually needs so
@@ -210,7 +208,7 @@
                 // inherit from <body class="font-typewriter">) is what makes
                 // picking "Tulisan Tangan" here actually change how the note
                 // looks, immediately, instead of silently doing nothing.
-                editorArea.classList.remove('font-typewriter', 'font-handwriting', 'font-cursive', 'font-handwriting2', 'font-handwriting3');
+                editorArea.classList.remove('font-typewriter', 'font-handwriting', 'font-cursive');
                 editorArea.classList.add(s.fontStyle);
                 this.updateFontIndicator();
 
