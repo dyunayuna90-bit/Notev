@@ -124,6 +124,22 @@
             overscroll-behavior-y: contain;
         }
 
+        /* The Home list re-renders its notes grid on every search
+           keystroke (fewer/more cards, or the empty state swapping in) —
+           each of those resizes the content sitting right below the
+           sticky header. Chromium's scroll-anchoring heuristic (on by
+           default) tries to compensate by nudging the scroll position to
+           keep "the same content" in view whenever a sibling's size
+           changes, and with a sticky header sitting right there that
+           nudging is what was making the header visibly jump on every
+           keystroke while searching. Turning it off for this container
+           removes that compensation entirely — nothing here relies on it
+           anyway, since the list is always short enough to sit at
+           scrollTop 0 while actively searching. */
+        #viewNotesList {
+            overflow-anchor: none;
+        }
+
         /* Base Paper styles */
         .theme-vintage {
             background-color: #fcf8ec;
