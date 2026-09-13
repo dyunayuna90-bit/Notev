@@ -68,7 +68,7 @@
                      badge) so it can't trigger that same separate-layer
                      WebView repaint glitch. Remove once the bug's root
                      cause is confirmed fixed. -->
-                <div id="debugSizeLabel" style="position:absolute; left:2px; right:2px; bottom:-26px; z-index:40; font:9px monospace; color:#c0392b; pointer-events:none; white-space:normal; line-height:1.3;">-</div>
+                <div id="debugSizeLabel" style="position:absolute; left:2px; right:2px; bottom:-58px; z-index:40; font:9px monospace; color:#c0392b; pointer-events:none; white-space:pre-line; line-height:1.3;">-</div>
                 <button id="btnToggleLayout" class="icon-btn-plain text-office-text shrink-0" title="Ubah tampilan kolom">
                     <svg id="iconLayoutSingle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="16" width="18" height="4"/></svg>
                     <svg id="iconLayoutGrid" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
@@ -430,16 +430,25 @@
                 var root = document.getElementById('appRoot');
                 var list = document.getElementById('viewNotesList');
                 var header = document.getElementById('headerDefault');
+                var capsule = document.getElementById('searchInput');
+                var firstCard = document.querySelector('#notesContainer .office-card-note, #pinnedContainer .office-card-note');
                 var rootH = root ? Math.round(root.getBoundingClientRect().height) : '-';
                 var listH = list ? Math.round(list.getBoundingClientRect().height) : '-';
-                var headerTop = header ? Math.round(header.getBoundingClientRect().top) : '-';
+                var headerRect = header ? header.getBoundingClientRect() : null;
+                var capsuleRect = capsule ? capsule.getBoundingClientRect() : null;
+                var cardRect = firstCard ? firstCard.getBoundingClientRect() : null;
                 el.textContent = 'winH:' + window.innerHeight +
                     ' bodyH:' + Math.round(body.height) +
                     ' rootH:' + rootH +
-                    ' listH:' + listH +
-                    ' hdrTop:' + headerTop +
-                    ' inset:' + getComputedStyle(document.documentElement).getPropertyValue('--native-inset-top').trim() +
-                    ' padTop:' + (header ? getComputedStyle(header).paddingTop : '-');
+                    ' listH:' + listH + '\n' +
+                    'inset:' + getComputedStyle(document.documentElement).getPropertyValue('--native-inset-top').trim() +
+                    ' padTop:' + (header ? getComputedStyle(header).paddingTop : '-') + '\n' +
+                    'hdrTop:' + (headerRect ? Math.round(headerRect.top) : '-') +
+                    ' hdrH:' + (headerRect ? Math.round(headerRect.height) : '-') +
+                    ' capTop:' + (capsuleRect ? Math.round(capsuleRect.top) : '-') +
+                    ' capH:' + (capsuleRect ? Math.round(capsuleRect.height) : '-') + '\n' +
+                    'card1Top:' + (cardRect ? Math.round(cardRect.top) : '-') +
+                    ' card1H:' + (cardRect ? Math.round(cardRect.height) : '-');
             }
             updateDebugSize();
             setInterval(updateDebugSize, 300);
