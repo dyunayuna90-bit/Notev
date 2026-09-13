@@ -217,14 +217,14 @@
                     document.getElementById('paperWhite').checked = true;
                     paperCanvas.classList.remove('theme-vintage');
                     paperCanvas.classList.add('theme-white');
-                    document.getElementById('paperVintageLabel').classList.replace('border-vintage-accent', 'border-transparent');
-                    document.getElementById('paperWhiteLabel').classList.replace('border-transparent', 'border-vintage-accent');
+                    document.getElementById('paperVintageLabel').classList.replace('border-office-accent', 'border-transparent');
+                    document.getElementById('paperWhiteLabel').classList.replace('border-transparent', 'border-office-accent');
                 } else {
                     document.getElementById('paperVintage').checked = true;
                     paperCanvas.classList.remove('theme-white');
                     paperCanvas.classList.add('theme-vintage');
-                    document.getElementById('paperWhiteLabel').classList.replace('border-vintage-accent', 'border-transparent');
-                    document.getElementById('paperVintageLabel').classList.replace('border-transparent', 'border-vintage-accent');
+                    document.getElementById('paperWhiteLabel').classList.replace('border-office-accent', 'border-transparent');
+                    document.getElementById('paperVintageLabel').classList.replace('border-transparent', 'border-office-accent');
                 }
 
                 // Ruled lines sync
