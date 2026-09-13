@@ -205,7 +205,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
             <span class="w-px h-4 bg-vintage-muted"></span>
-            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter" title="Mesin Tik">Ab</button>
+            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter" title="Anak-Anak">Ab</button>
             <button data-bubble-font="font-handwriting" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting" title="Tulisan Tangan">Ab</button>
             <button data-bubble-font="font-cursive" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-cursive" title="Sambung">Ab</button>
             <span class="w-px h-4 bg-vintage-muted"></span>
@@ -307,7 +307,7 @@
                         <div class="office-row-body">
                             <div class="text-xs font-semibold mb-1.5">Gaya Font</div>
                             <div class="grid grid-cols-3 gap-2">
-                                <button data-font="font-typewriter" class="btnFontOption px-2 py-2 text-xs font-typewriter bg-office-surface border border-office-border rounded-sm text-center">Mesin Tik</button>
+                                <button data-font="font-typewriter" class="btnFontOption px-2 py-2 text-xs font-typewriter bg-office-surface border border-office-border rounded-sm text-center">Anak-Anak</button>
                                 <button data-font="font-handwriting" class="btnFontOption px-2 py-2 text-sm font-handwriting bg-office-surface border border-office-border rounded-sm text-center">Tulisan Tangan</button>
                                 <button data-font="font-cursive" class="btnFontOption px-2 py-2 text-sm font-cursive bg-office-surface border border-office-border rounded-sm text-center">Sambung</button>
                             </div>
@@ -394,26 +394,6 @@
     <!-- App scripts, in dependency order. Kept as plain <script> tags (no
          bundler/build step needed) so this still runs by just opening
          index.html, exactly like the old single-file version did. -->
-    <!-- TEMPORARY DEBUG BADGE — remove once the notch/header inset bug is
-         confirmed fixed. Shows the live value of --native-inset-top (set by
-         MainActivity.java) so we can tell from a screenshot whether the
-         native → CSS injection is actually landing, instead of guessing
-         blind at native Android inset behavior. -->
-    <div id="debugInsetBadge" style="position:fixed; top:0; left:0; z-index:99999; background:#c0392b; color:#fff; font:11px monospace; padding:2px 5px; pointer-events:none;">-</div>
-    <script>
-        (function () {
-            function updateDebugBadge() {
-                var el = document.getElementById('debugInsetBadge');
-                if (!el) return;
-                var cs = getComputedStyle(document.documentElement);
-                var native = cs.getPropertyValue('--native-inset-top').trim();
-                el.textContent = 'native-inset-top: ' + (native || '(unset)');
-            }
-            updateDebugBadge();
-            setInterval(updateDebugBadge, 300);
-        })();
-    </script>
-
     <script src="js/storage.js"></script>
     <script src="js/undo-redo.js"></script>
     <script src="js/navigation.js"></script>
