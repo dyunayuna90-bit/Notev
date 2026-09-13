@@ -335,7 +335,7 @@
         .app-home-header {
             min-height: 56px;
             box-sizing: border-box;
-            padding-top: calc(env(safe-area-inset-top, 0px) + 0.625rem);
+            padding-top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 0.625rem);
             padding-bottom: 0.625rem;
         }
 
@@ -524,6 +524,11 @@
    under a camera notch/status bar and keeps the bottom toolbar clear of the
    gesture-navigation bar / home indicator, on both Android and iOS.
    ========================================================================== */
+/* --native-inset-top is set by MainActivity.java on the real device (the
+   Android WebView doesn't reliably populate env(safe-area-inset-top) on its
+   own in edge-to-edge mode). Every padding-top below tries that variable
+   first and only falls back to plain env() when it isn't set — i.e. when
+   running as a plain PWA/browser tab instead of inside the APK. */
 #appRoot,
 #settingsModal {
     /* padding-top intentionally NOT set here anymore — #appRoot and
@@ -549,18 +554,18 @@
    plus a bit extra so it clears the notch/status bar instead of sitting
    flush against it. */
 .editor-more-menu-wrap {
-    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 0.75rem);
 }
 
 /* Extra breathing room above the note title itself — bigger and separate
    from the kebab menu's own offset above, purely for aesthetics (an empty
    "header" feel instead of the title sitting right under the notch/menu). */
 #paperCanvas {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+    padding-top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem);
 }
 @media (min-width: 768px) {
     #paperCanvas {
-        padding-top: calc(env(safe-area-inset-top, 0px) + 4rem);
+        padding-top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 4rem);
     }
 }
 
