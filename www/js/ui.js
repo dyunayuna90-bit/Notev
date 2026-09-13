@@ -94,10 +94,21 @@
                     this.enterNoteViewMode();
                 });
 
-                // Search input filter
+                // Search input filter.
+                // Filtering can shrink the list a lot (e.g. from 20 notes
+                // down to 1), which shrinks #viewNotesList's scrollHeight.
+                // If the user had scrolled down before typing, the browser
+                // immediately clamps scrollTop to fit the new, shorter
+                // content — which visually looks like the sticky search
+                // header "jumped" to a different height/position, when
+                // really the whole list just got yanked up underneath it.
+                // Snapping back to the top on every keystroke keeps the
+                // header rock-steady and matches how search normally
+                // behaves (results start from the top anyway).
                 const searchInput = document.getElementById('searchInput');
                 searchInput.addEventListener('input', (e) => {
                     this.renderNotesList(e.target.value.toLowerCase());
+                    document.getElementById('viewNotesList').scrollTop = 0;
                 });
 
                 // Pressing the Android back button while the search bar is
