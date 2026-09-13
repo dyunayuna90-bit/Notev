@@ -319,6 +319,59 @@
             background-color: #f6ecd9;
         }
 
+        /* ==========================================================
+           HOME / SETTINGS HEADER — fixed height so switching between
+           #headerDefault <-> #headerSelection (and #headerSettings)
+           never changes the header's height. Every one of these three
+           headers uses this same class, so they're all identical.
+           ========================================================== */
+        .app-home-header {
+            height: 56px;
+        }
+
+        /* Search bar — tall capsule/pill, sits centered between the
+           borderless layout + settings buttons. */
+        .search-capsule {
+            height: 44px;
+            border-radius: 9999px;
+        }
+
+        /* Layout-toggle / settings / back / cancel / pin / delete buttons
+           in the home & settings headers — deliberately no border and no
+           background "frame", just the bare icon. */
+        .icon-btn-plain {
+            background: transparent;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 0;
+            transition: background-color 0.12s ease;
+        }
+        .icon-btn-plain:active {
+            background-color: rgba(58, 44, 34, 0.08); /* faint office-text tint, no visible frame at rest */
+        }
+
+        /* ==========================================================
+           2-COLUMN "MASONRY" NOTE GRID — each card's height follows its
+           own content instead of being stretched to match the tallest
+           card in its row (which is what CSS Grid normally does). Uses
+           a 2-column CSS multi-column flow instead of `display: grid`.
+           1-column mode is unaffected and keeps using a normal grid.
+           ========================================================== */
+        .notes-masonry {
+            column-count: 2;
+            column-gap: 0.75rem;
+        }
+        .notes-masonry > .office-card-note {
+            break-inside: avoid;
+            -webkit-column-break-inside: avoid;
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+
         /* Active/selected font-option indicator on the Settings page,
            using the new office accent instead of the old vintage-accent
            red-brown — Settings-only, doesn't touch the editor. */
