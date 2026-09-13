@@ -45,38 +45,41 @@
 
         <!-- VIEW 1: NOTES LIST VIEW (Full width dashboard) -->
         <section id="viewNotesList" class="momentum-scroll flex-1 flex flex-col h-full overflow-y-auto relative">
-            <!-- Header List View: Default mode (search + layout + select + settings) -->
-            <header id="headerDefault" class="font-ui-modern bg-office-header px-3 py-2.5 sticky top-0 z-30 flex items-center gap-2">
+            <!-- Header List View: Default mode (layout + search + settings).
+                 Batch-select has no dedicated button anymore — it's entered
+                 via long-press on a note card — but a fixed height (see
+                 .app-home-header in styles.css) keeps this exactly as tall
+                 as #headerSelection below, so switching between the two
+                 never makes the header visibly jump. -->
+            <header id="headerDefault" class="app-home-header font-ui-modern bg-office-bg px-2 sticky top-0 z-30 flex items-center gap-1">
+                <button id="btnToggleLayout" class="icon-btn-plain text-office-text shrink-0" title="Ubah tampilan kolom">
+                    <svg id="iconLayoutSingle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="16" width="18" height="4"/></svg>
+                    <svg id="iconLayoutGrid" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
+                </button>
                 <div class="relative flex-1 min-w-0">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-office-muted pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                    <input type="text" id="searchInput" placeholder="Cari catatan..." class="w-full bg-office-surface border border-office-border text-office-text placeholder-office-muted pl-9 pr-3 py-2 text-sm rounded-sm focus:outline-none focus:border-office-accent">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-office-muted pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                    <input type="text" id="searchInput" placeholder="Cari catatan..." class="search-capsule w-full bg-office-surface border border-office-border text-office-text placeholder-office-muted pl-10 pr-4 text-sm focus:outline-none focus:border-office-accent">
                 </div>
-                <button id="btnToggleLayout" class="btn-office p-2.5 text-office-text rounded-sm shrink-0" title="Ubah tampilan kolom">
-                    <svg id="iconLayoutSingle" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="16" width="18" height="4"/></svg>
-                    <svg id="iconLayoutGrid" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
-                </button>
-                <button id="btnToggleSelect" class="btn-office p-2.5 text-office-text rounded-sm shrink-0" title="Pilih catatan">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                </button>
-                <button id="btnOpenSettings" class="btn-office p-2.5 text-office-text rounded-sm shrink-0" title="Pengaturan">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                <button id="btnOpenSettings" class="icon-btn-plain text-office-text shrink-0" title="Pengaturan">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                 </button>
             </header>
 
-            <!-- Header List View: Batch selection mode -->
-            <header id="headerSelection" class="hidden font-ui-modern bg-office-headerDark text-office-surface px-3 py-2.5 sticky top-0 z-30 items-center justify-between gap-2">
+            <!-- Header List View: Batch selection mode (entered by long-pressing
+                 a note card). Same fixed height as #headerDefault above. -->
+            <header id="headerSelection" class="hidden app-home-header font-ui-modern bg-office-bg text-office-text px-2 sticky top-0 z-30 items-center justify-between gap-2">
                 <div class="flex items-center gap-1 min-w-0">
-                    <button id="btnCancelSelect" class="p-2 hover:bg-white/10 active:bg-white/20 rounded-sm shrink-0" title="Batal pilih">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    <button id="btnCancelSelect" class="icon-btn-plain shrink-0" title="Batal pilih">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                     <span id="selectionCount" class="font-semibold text-sm truncate">0 dipilih</span>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
-                    <button id="btnPinSelected" class="p-2 hover:bg-white/10 active:bg-white/20 rounded-sm opacity-40 transition-opacity" title="Sematkan / lepas sematan">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
+                    <button id="btnPinSelected" class="icon-btn-plain opacity-40 transition-opacity" title="Sematkan / lepas sematan">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
                     </button>
-                    <button id="btnDeleteSelected" class="p-2 hover:bg-white/10 active:bg-white/20 rounded-sm opacity-40 transition-opacity" title="Hapus catatan terpilih">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    <button id="btnDeleteSelected" class="icon-btn-plain opacity-40 transition-opacity" title="Hapus catatan terpilih">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     </button>
                 </div>
             </header>
@@ -218,8 +221,8 @@
     <!-- Settings Full-Screen Page (not a modal popup) -->
     <section id="settingsModal" class="hidden flex-1 flex flex-col w-full h-full fixed inset-0 z-50 bg-office-bg font-ui-modern overflow-hidden">
         <!-- Full Screen Settings Header -->
-        <header id="headerSettings" class="bg-office-header text-office-surface px-3 py-2 flex items-center gap-3 shrink-0 z-10">
-            <button id="btnCloseSettings" class="btn-office p-2 text-office-text rounded-sm" title="Kembali">
+        <header id="headerSettings" class="app-home-header bg-office-bg text-office-text px-2 flex items-center gap-2 shrink-0 z-10">
+            <button id="btnCloseSettings" class="icon-btn-plain text-office-text" title="Kembali">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </button>
             <h2 class="text-base font-semibold">Pengaturan</h2>
