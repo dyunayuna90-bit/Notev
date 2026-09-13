@@ -68,7 +68,7 @@
                      badge) so it can't trigger that same separate-layer
                      WebView repaint glitch. Remove once the bug's root
                      cause is confirmed fixed. -->
-                <div id="debugSizeLabel" style="position:absolute; left:2px; bottom:-13px; z-index:40; font:9px monospace; color:#c0392b; pointer-events:none; white-space:nowrap;">-</div>
+                <div id="debugSizeLabel" style="position:absolute; left:2px; right:2px; bottom:-26px; z-index:40; font:9px monospace; color:#c0392b; pointer-events:none; white-space:normal; line-height:1.3;">-</div>
                 <button id="btnToggleLayout" class="icon-btn-plain text-office-text shrink-0" title="Ubah tampilan kolom">
                     <svg id="iconLayoutSingle" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="16" width="18" height="4"/></svg>
                     <svg id="iconLayoutGrid" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
@@ -437,7 +437,9 @@
                     ' bodyH:' + Math.round(body.height) +
                     ' rootH:' + rootH +
                     ' listH:' + listH +
-                    ' hdrTop:' + headerTop;
+                    ' hdrTop:' + headerTop +
+                    ' inset:' + getComputedStyle(document.documentElement).getPropertyValue('--native-inset-top').trim() +
+                    ' padTop:' + (header ? getComputedStyle(header).paddingTop : '-');
             }
             updateDebugSize();
             setInterval(updateDebugSize, 300);
