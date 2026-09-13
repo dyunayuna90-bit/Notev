@@ -27,7 +27,12 @@
                     ruledLineSpacing: 36,
                     letterSpacing: 0,
                     agedPaperEffect: false,
-                    eyeProtection: false
+                    eyeProtection: false,
+                    // Home screen note-list layout: 1 = single column
+                    // (default), 2 = two columns. Purely a Home/UI
+                    // preference — doesn't touch the note content or the
+                    // editor in any way.
+                    noteListColumns: 1
                 };
                 try {
                     const stored = JSON.parse(localStorage.getItem(this.STORAGE_KEY_SETTINGS)) || {};
