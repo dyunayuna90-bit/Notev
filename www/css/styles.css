@@ -6,9 +6,11 @@
            plain em would if a span ever ended up nested inside another
            font's span — while still actually responding to the font-size
            slider, which a hardcoded rem value never could. */
-        /* "Mesin Tik" note style — was a literal monospace typewriter font
-           (Special Elite) before; swapped for Indie Flower, a looser
-           handwritten-marker style, per user preference. Multiplier bumped
+        /* "Anak-Anak" note style (was labeled "Mesin Tik" in the UI, which
+           no longer matched the font — see label fix in index.html). Was a
+           literal monospace typewriter font (Special Elite) before; swapped
+           for Indie Flower, a looser handwritten-marker style, per user
+           preference. Multiplier bumped
            slightly (1 → 1.05) since Indie Flower renders a touch smaller
            than Special Elite at the same font-size — kept in sync with
            SettingsModule.FONT_SIZE_MULTIPLIER['font-typewriter']. */
