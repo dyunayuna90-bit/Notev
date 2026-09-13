@@ -10,6 +10,16 @@
             longPressTimer: null,
             longPressTriggered: false,
 
+            // Tracks whether we've pushed a history entry for "search bar is
+            // focused" / "note title or body has a caret" — see
+            // enterSearchFocus/exitSearchFocus and enterTypingFocus/
+            // exitTypingFocus below. Mirrors the exact same pushState/back
+            // pattern already used for selectionMode, so the Android
+            // hardware back button dismisses the keyboard first instead of
+            // immediately leaving the search bar / the note.
+            searchFocusPushed: false,
+            typingFocusPushed: false,
+
             // "Lihat Penuh" (full view) state for the editor — a read-only,
             // chrome-free way to re-read a note: no three-dot menu, no
             // caret/selection. Entered via the dropdown, exited only via
@@ -22,6 +32,15 @@
                 document.getElementById('btnEditorMoreMenu').classList.add('hidden');
                 this.hideBubble();
 
+                // If a "typing focus" history entry is currently on top (the
+                // caret was active a moment ago), REPLACE it with the
+                // viewMode entry instead of pushing a new one on top of it —
+                // otherwise that entry would be left stranded underneath
+                // viewMode and a later back-press would land on it instead
+                // of cleanly exiting the note.
+                const hadTypingFocus = this.typingFocusPushed;
+                this.exitTypingFocus(true); // silent: just clears the flag, no history.back()
+
                 const titleEl = document.getElementById('noteTitleInput');
                 const editorEl = document.getElementById('editorArea');
                 titleEl.blur();
@@ -29,7 +48,8 @@
                 titleEl.readOnly = true;
                 editorEl.setAttribute('contenteditable', 'false');
 
-                history.pushState({ page: 'editor', noteId: EditorModule.currentNoteId, viewMode: true }, '', '#lihat-penuh');
+                const method = hadTypingFocus ? 'replaceState' : 'pushState';
+                history[method]({ page: 'editor', noteId: EditorModule.currentNoteId, viewMode: true }, '', '#lihat-penuh');
             },
 
             exitNoteViewMode() {
@@ -71,15 +91,33 @@
                 });
 
                 // Search input filter
-                document.getElementById('searchInput').addEventListener('input', (e) => {
+                const searchInput = document.getElementById('searchInput');
+                searchInput.addEventListener('input', (e) => {
                     this.renderNotesList(e.target.value.toLowerCase());
                 });
 
-                // Batch selection controls
-                document.getElementById('btnToggleSelect').addEventListener('click', () => {
-                    if (this.selectionMode) this.exitSelectionMode();
-                    else this.enterSelectionMode();
+                // Pressing the Android back button while the search bar is
+                // focused should just close the keyboard, not leave the
+                // search bar or the app.
+                searchInput.addEventListener('focus', () => this.enterSearchFocus());
+                searchInput.addEventListener('blur', () => this.exitSearchFocus());
+
+                // Same idea for the note editor: back button closes the
+                // keyboard/caret first, THEN (on a second press) leaves the
+                // note. Moving focus directly between the title and the body
+                // (e.g. tapping from one into the other) should NOT count as
+                // "closing" — handleTypingBlur waits a tick to check that.
+                const titleInputEl = document.getElementById('noteTitleInput');
+                const editorAreaEl = document.getElementById('editorArea');
+                [titleInputEl, editorAreaEl].forEach(el => {
+                    el.addEventListener('focus', () => this.enterTypingFocus());
+                    el.addEventListener('blur', () => this.handleTypingBlur());
                 });
+
+                // Batch selection controls. There's no dedicated header
+                // button to enter selection mode anymore — long-pressing a
+                // note card (see attachCardGestures) does that instead —
+                // but Cancel/Delete/Pin inside the selection header still work.
                 document.getElementById('btnCancelSelect').addEventListener('click', () => this.exitSelectionMode());
                 document.getElementById('btnDeleteSelected').addEventListener('click', () => this.deleteSelected());
                 document.getElementById('btnPinSelected').addEventListener('click', () => this.togglePinSelected());
@@ -101,13 +139,23 @@
             // CURRENT state (so the icon shown is the layout you're on,
             // not the one you'd switch to — matches how this pattern reads
             // in Office mobile apps).
+            //
+            // 2-column mode uses a CSS multi-column ("masonry") flow instead
+            // of `display: grid` — grid would stretch every card in a row to
+            // match the tallest one, so a one-line note would end up just as
+            // tall as a long one next to it. Columns let each card keep its
+            // own natural, content-sized height instead.
             applyListLayout(columns) {
                 const cols = columns === 2 ? 2 : 1;
                 const notesContainer = document.getElementById('notesContainer');
                 const pinnedContainer = document.getElementById('pinnedContainer');
                 [notesContainer, pinnedContainer].forEach(el => {
-                    el.classList.remove('grid-cols-1', 'grid-cols-2');
-                    el.classList.add(cols === 2 ? 'grid-cols-2' : 'grid-cols-1');
+                    el.classList.remove('grid', 'grid-cols-1', 'grid-cols-2', 'gap-3', 'notes-masonry');
+                    if (cols === 2) {
+                        el.classList.add('notes-masonry');
+                    } else {
+                        el.classList.add('grid', 'grid-cols-1', 'gap-3');
+                    }
                 });
 
                 const btn = document.getElementById('btnToggleLayout');
@@ -308,7 +356,8 @@
                     viewEditor.style.transformOrigin = '';
                     viewEditor.style.willChange = '';
                     NavigationModule.activeView = 'editor';
-                    history.pushState({ page: 'editor', noteId }, '', '#editor');
+                    const method = this.collapseTransientFocusState() ? 'replaceState' : 'pushState';
+                    history[method]({ page: 'editor', noteId }, '', '#editor');
                     document.getElementById('viewNotesList').classList.add('hidden');
                 };
                 stretchAnim.finished.then(finish).catch(finish);
@@ -394,14 +443,108 @@
                 setTimeout(finish, DURATION + 120);
             },
 
+            // --- Search bar: back button closes it before leaving the screen ---
+            enterSearchFocus() {
+                if (this.searchFocusPushed) return;
+                this.searchFocusPushed = true;
+                history.pushState({ mode: 'searchFocus' }, '', '#search');
+            },
+
+            // fromPopState is true when this was called because the
+            // "#search" history entry was just popped (hardware back
+            // button) — in that case the stack is already correct and we
+            // must NOT pop it again. Otherwise (search naturally loses
+            // focus because the user tapped elsewhere) we pop it ourselves,
+            // matching the same convention exitSelectionMode uses below.
+            exitSearchFocus(fromPopState = false) {
+                if (!this.searchFocusPushed) return;
+                this.searchFocusPushed = false;
+                document.getElementById('searchInput').blur();
+                if (fromPopState) return;
+                // Deferred: if this blur happened because the user tapped
+                // straight into another screen (e.g. a note card or the
+                // Settings button), that tap's own navigation may still be
+                // about to push its own history entry. Waiting a tick lets
+                // that happen first, so we only pop the leftover "#search"
+                // entry if nothing else already took its place.
+                setTimeout(() => {
+                    if (history.state && history.state.mode === 'searchFocus') {
+                        history.back();
+                    }
+                }, 0);
+            },
+
+            // --- Note title/body: back button closes the caret/keyboard
+            // before leaving the note ---
+            enterTypingFocus() {
+                if (this.typingFocusPushed) return;
+                this.typingFocusPushed = true;
+                history.pushState({ mode: 'typingFocus' }, '', '#typing');
+            },
+
+            exitTypingFocus(fromPopState = false) {
+                if (!this.typingFocusPushed) return;
+                this.typingFocusPushed = false;
+                document.getElementById('noteTitleInput').blur();
+                document.getElementById('editorArea').blur();
+                if (fromPopState) return;
+                setTimeout(() => {
+                    if (history.state && history.state.mode === 'typingFocus') {
+                        history.back();
+                    }
+                }, 0);
+            },
+
+            // Runs a tick after title/body blurs. Waiting lets us tell a
+            // genuine "user left both fields" apart from focus simply
+            // hopping from the title straight into the body (or vice versa),
+            // which should keep the typing-focus state active.
+            handleTypingBlur() {
+                setTimeout(() => {
+                    const active = document.activeElement;
+                    const titleEl = document.getElementById('noteTitleInput');
+                    const editorEl = document.getElementById('editorArea');
+                    if (active !== titleEl && active !== editorEl) {
+                        this.exitTypingFocus();
+                    }
+                }, 0);
+            },
+
+            // Call this right before intentionally pushing a new "page"
+            // history entry (opening the editor, opening Settings). If the
+            // search bar or note caret currently has a transient focus
+            // entry on top of the stack, this clears it — the caller should
+            // then use history.replaceState instead of pushState, so that
+            // entry gets overwritten in place instead of left stranded
+            // underneath the new page (which would otherwise need an extra,
+            // invisible back-press to get past later).
+            collapseTransientFocusState() {
+                if (this.searchFocusPushed) {
+                    this.searchFocusPushed = false;
+                    document.getElementById('searchInput').blur();
+                    return true;
+                }
+                if (this.typingFocusPushed) {
+                    this.typingFocusPushed = false;
+                    document.getElementById('noteTitleInput').blur();
+                    document.getElementById('editorArea').blur();
+                    return true;
+                }
+                return false;
+            },
+
             enterSelectionMode() {
                 if (this.selectionMode) return;
                 this.selectionMode = true;
                 // Push a dedicated history entry so the hardware/browser back
                 // button has something of ours to pop first, instead of
                 // falling straight through to whatever was open before this
-                // page (which is what was making back exit the app).
-                history.pushState({ mode: 'selection' }, '', '#select');
+                // page (which is what was making back exit the app). If the
+                // search bar happened to have focus a moment ago (long-press
+                // can start while search is focused), replace that entry
+                // instead of stacking on top of it.
+                const method = this.collapseTransientFocusState() ? 'replaceState' : 'pushState';
+                history[method]({ mode: 'selection' }, '', '#select');
                 document.getElementById('headerDefault').classList.add('hidden');
                 document.getElementById('headerSelection').classList.remove('hidden');
                 document.getElementById('headerSelection').classList.add('flex');
