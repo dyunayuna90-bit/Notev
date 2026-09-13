@@ -141,12 +141,43 @@
                 // Purely a display preference for the notes list — has no
                 // effect on the editor/canvas.
                 document.getElementById('btnToggleLayout').addEventListener('click', () => {
+                    this.switchListLayout();
+                });
+
+                document.getElementById('btnCopySelected').addEventListener('click', () => this.duplicateSelected());
+            },
+
+            // Swaps the 1-/2-column layout with a brief crossfade instead
+            // of an instant reflow: fade the two containers out, swap the
+            // column classes + rebuild the cards while invisible, then fade
+            // back in. The cards' own .note-card-enter animation (applied
+            // fresh by createNoteCard on every rebuild) does the actual
+            // "coming in" motion; this wrapper just hides the jarring
+            // in-between reflow frame so the two effects read as one
+            // smooth transition rather than a hard jump cut.
+            switchListLayout() {
+                const notesContainer = document.getElementById('notesContainer');
+                const pinnedContainer = document.getElementById('pinnedContainer');
+                const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                const applyNewLayout = () => {
                     const s = StorageModule.getSettings();
                     s.noteListColumns = s.noteListColumns === 2 ? 1 : 2;
                     StorageModule.saveSettings(s);
                     this.applyListLayout(s.noteListColumns);
                     this.renderNotesList(document.getElementById('searchInput').value.toLowerCase());
-                });
+                    notesContainer.classList.remove('notes-layout-fading');
+                    pinnedContainer.classList.remove('notes-layout-fading');
+                };
+
+                if (reduceMotion) {
+                    applyNewLayout();
+                    return;
+                }
+
+                notesContainer.classList.add('notes-layout-fading');
+                pinnedContainer.classList.add('notes-layout-fading');
+                setTimeout(applyNewLayout, 120);
             },
 
             // Toggles the notes/pinned grid between 1 and 2 columns and
@@ -209,9 +240,15 @@
                 const pinnedNotes = filteredNotes.filter(n => n.pinned);
                 const restNotes = filteredNotes.filter(n => !n.pinned);
 
+                // A single running counter across BOTH sections, so the
+                // entrance-animation stagger (see createNoteCard) reads as
+                // one continuous cascade down the screen instead of
+                // restarting at the top of "Semua Catatan".
+                let renderIndex = 0;
+
                 if (pinnedNotes.length > 0) {
                     pinnedSection.classList.remove('hidden');
-                    pinnedNotes.forEach(note => pinnedContainer.appendChild(this.createNoteCard(note)));
+                    pinnedNotes.forEach(note => pinnedContainer.appendChild(this.createNoteCard(note, renderIndex++)));
                 } else {
                     pinnedSection.classList.add('hidden');
                 }
@@ -221,13 +258,13 @@
                 // and a label just adds noise.
                 allNotesLabel.classList.toggle('hidden', pinnedNotes.length === 0);
 
-                restNotes.forEach(note => container.appendChild(this.createNoteCard(note)));
+                restNotes.forEach(note => container.appendChild(this.createNoteCard(note, renderIndex++)));
             },
 
             // Builds a single note card, wired for both the normal "tap to
             // open" flow and the long-press-to-select / tap-to-toggle flow
             // used while batch selection mode is active.
-            createNoteCard(note) {
+            createNoteCard(note, index = 0) {
                 const isSelected = this.selectedIds.has(note.id);
 
                 const card = document.createElement('div');
@@ -238,9 +275,20 @@
                 // animated rectangle. Everything ELSE about the card (border,
                 // font, badges) is the new flat Office-Mobile style — only the
                 // morph-target background color still has to match the editor.
-                card.className = `office-card-note font-ui-modern p-4 flex flex-col justify-between cursor-pointer relative select-none ${isSelected ? 'ring-2 ring-office-accent' : ''}`;
+                card.className = `office-card-note font-ui-modern p-4 flex flex-col justify-between cursor-pointer relative select-none note-card-enter ${isSelected ? 'ring-2 ring-office-accent' : ''}`;
                 card.style.backgroundColor = SettingsModule.getPaperColor();
                 card.dataset.noteId = note.id;
+
+                // Small stagger so the cards cascade in rather than all
+                // popping at once — capped at 8 cards' worth of delay so a
+                // long list (or fast typing while searching) never leaves
+                // late cards waiting on a long queued delay.
+                card.style.animationDelay = `${Math.min(index, 8) * 18}ms`;
+                // The animation only needs to play once per render; once it
+                // finishes, drop the class so this card is never mistaken
+                // for one that still needs animating (e.g. by any future
+                // code that queries .note-card-enter).
+                card.addEventListener('animationend', () => card.classList.remove('note-card-enter'), { once: true });
 
                 // Strip HTML tags for clean card preview
                 const tempDiv = document.createElement('div');
@@ -253,7 +301,7 @@
                     </div>` : '';
 
                 const selectionDot = this.selectionMode ? `
-                    <div class="w-5 h-5 mt-0.5 rounded-sm border border-office-border flex items-center justify-center shrink-0 ${isSelected ? 'bg-office-accent border-office-accent' : 'bg-office-surface'}">
+                    <div class="note-selection-dot w-5 h-5 mt-0.5 rounded-sm border border-office-border flex items-center justify-center shrink-0 ${isSelected ? 'bg-office-accent border-office-accent' : 'bg-office-surface'}">
                         ${isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
                     </div>` : '';
 
@@ -636,14 +684,75 @@
                 }
 
                 this.updateSelectionHeader();
-                this.renderNotesList(document.getElementById('searchInput').value.toLowerCase());
+                this.updateCardSelectionVisual(noteId);
+            },
+
+            // Patches ONE card's selected look (ring + checkbox) in place,
+            // instead of calling renderNotesList() — which used to run on
+            // every single tap during batch selection and rebuilt EVERY
+            // card, not just the tapped one. Once cards got an entrance
+            // animation (for the smooth search/layout-switch effects), that
+            // full rebuild made the animation visibly replay on each tap,
+            // looking like the whole list "reloaded" every time a card was
+            // selected. Selecting/deselecting a card never needs to change
+            // any OTHER card's markup, so only the one that changed is
+            // touched here.
+            updateCardSelectionVisual(noteId) {
+                const card = document.querySelector(`[data-note-id="${noteId}"]`);
+                if (!card) return;
+                const isSelected = this.selectedIds.has(noteId);
+                card.classList.toggle('ring-2', isSelected);
+                card.classList.toggle('ring-office-accent', isSelected);
+                const dot = card.querySelector('.note-selection-dot');
+                if (dot) {
+                    dot.classList.toggle('bg-office-accent', isSelected);
+                    dot.classList.toggle('border-office-accent', isSelected);
+                    dot.classList.toggle('bg-office-surface', !isSelected);
+                    dot.innerHTML = isSelected
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'
+                        : '';
+                }
             },
 
             updateSelectionHeader() {
                 const count = this.selectedIds.size;
                 document.getElementById('selectionCount').textContent = `${count} dipilih`;
                 document.getElementById('btnPinSelected').classList.toggle('opacity-40', count === 0);
+                document.getElementById('btnCopySelected').classList.toggle('opacity-40', count === 0);
                 document.getElementById('btnDeleteSelected').classList.toggle('opacity-40', count === 0);
+            },
+
+            // Duplicates every selected note as a brand-new, unpinned note
+            // (title suffixed with "(Salinan)"), then exits selection mode
+            // — matches how Delete/Pin already behave after acting on a
+            // selection. Ids are minted from Date.now() + the loop index
+            // (not Date.now() alone) since duplicating several notes at
+            // once runs in the same tick, and Date.now() alone could hand
+            // two of them the exact same millisecond.
+            duplicateSelected() {
+                if (this.selectedIds.size === 0) return;
+                const count = this.selectedIds.size;
+
+                const notes = StorageModule.getNotes();
+                const now = new Date().toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                const duplicates = notes
+                    .filter(n => this.selectedIds.has(n.id))
+                    .map((n, i) => ({
+                        ...n,
+                        id: `note_${Date.now()}_${i}`,
+                        title: `${n.title || 'Catatan Tanpa Judul'} (Salinan)`,
+                        pinned: false,
+                        createdAt: now,
+                        updatedAt: now
+                    }));
+
+                StorageModule.saveNotes([...duplicates, ...notes]);
+
+                this.showToast(count === 1 ? 'Catatan digandakan' : `${count} catatan digandakan`);
+                this.exitSelectionMode();
             },
 
             deleteSelected() {
