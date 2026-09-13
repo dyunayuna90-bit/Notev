@@ -19,6 +19,13 @@
            drive all default UI text (headers, buttons, labels) while every
            element keeps its own Tailwind text-size classes untouched. */
         .font-ui-hand { font-family: 'Caveat', cursive; font-weight: 600; }
+        /* Modern UI font for Home + Settings only (Office-Mobile style).
+           System font stack — no extra network/font-bundling dependency,
+           and 'Segoe UI' is literally Microsoft's own UI font so this
+           reads correctly as "Office style" out of the box on Windows/
+           Android alike. Editor chrome keeps font-ui-hand (see #viewEditor
+           and #selectionBubble in index.html) — completely unaffected. */
+        .font-ui-modern { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; }
         .font-handwriting { font-family: 'Caveat', cursive; font-weight: 500; font-size: calc(var(--note-font-size, 18px) * 1.2); letter-spacing: 0.2px; }
         .font-cursive { font-family: 'Dancing Script', cursive; font-size: calc(var(--note-font-size, 18px) * 1.15); }
         .font-title { font-family: 'Cinzel', serif; }
@@ -235,7 +242,9 @@
             transform: translateX(8px);
         }
 
-        /* Button Retro Shadow Effect */
+        /* Button Retro Shadow Effect — still used nowhere now (kept only so
+           nothing breaks if an older cached page references it), superseded
+           by .btn-office below for every Home/Settings button + note card. */
         .btn-retro {
             border: 2px solid #2c221e;
             box-shadow: 3px 3px 0px #2c221e;
@@ -244,6 +253,129 @@
         .btn-retro:active {
             transform: translate(2px, 2px);
             box-shadow: 1px 1px 0px #2c221e;
+        }
+
+        /* ==========================================================
+           OFFICE-MOBILE STYLE — Home (notes list) + Settings only.
+           Flat, thin hairline borders, sharp corners, no gradients, no
+           blur, no heavy drop shadow, no rounded pill buttons — matches
+           the plain/compact look of Microsoft Office mobile apps. Never
+           applied inside #viewEditor / #selectionBubble, which keep the
+           original vintage look untouched.
+           ========================================================== */
+        .btn-office {
+            border: 1px solid #ddcbb0; /* office-border */
+            background-color: #fffcf6; /* office-surface */
+            transition: background-color 0.12s ease, border-color 0.12s ease;
+        }
+        .btn-office:active {
+            background-color: #e9dcc5; /* office-divider */
+        }
+        .btn-office-accent {
+            background-color: #bb6a33; /* office-accent */
+            border: 1px solid #9c5527; /* office-accentDark */
+            color: #fffcf6;
+            transition: background-color 0.12s ease;
+        }
+        .btn-office-accent:active {
+            background-color: #9c5527;
+        }
+
+        /* Settings section card — flat surface, hairline border, sharp
+           (2px) corners, rows divided by a thin hairline instead of the
+           old rounded/shadowed vintage card. */
+        .office-card {
+            background-color: #fffcf6;
+            border: 1px solid #ddcbb0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .office-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.7rem 0.85rem;
+        }
+        .office-row + .office-row,
+        .office-row-body + .office-row-body,
+        .office-row-body + .office-row,
+        .office-row + .office-row-body {
+            border-top: 1px solid #e9dcc5;
+        }
+        .office-row-body {
+            padding: 0.7rem 0.85rem;
+        }
+
+        /* Flat note card used on the Home screen — thin border, sharp
+           corners, no offset/thick shadow. */
+        .office-card-note {
+            background-color: #fffcf6;
+            border: 1px solid #ddcbb0;
+            border-radius: 2px;
+            transition: background-color 0.12s ease;
+        }
+        .office-card-note:active {
+            background-color: #f6ecd9;
+        }
+
+        /* Active/selected font-option indicator on the Settings page,
+           using the new office accent instead of the old vintage-accent
+           red-brown — Settings-only, doesn't touch the editor. */
+        .font-option-active {
+            background-color: #bb6a33 !important;
+            color: #ffffff !important;
+            border-color: #9c5527 !important;
+            box-shadow: none !important;
+        }
+
+        /* Flat Fluent-style toggle switch for Settings (small pill is the
+           one universally-recognized exception to "sharp corners" — every
+           other control on this screen is square). */
+        .office-toggle {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .office-toggle input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .office-toggle .office-toggle-track {
+            position: absolute;
+            inset: 0;
+            background-color: #ddcbb0;
+            border-radius: 999px;
+            transition: background-color 0.15s ease;
+        }
+        .office-toggle .office-toggle-track::before {
+            content: "";
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 18px; height: 18px;
+            background-color: #fffcf6;
+            border-radius: 50%;
+            transition: transform 0.15s ease;
+        }
+        .office-toggle input:checked + .office-toggle-track {
+            background-color: #bb6a33;
+        }
+        .office-toggle input:checked + .office-toggle-track::before {
+            transform: translateX(16px);
+        }
+
+        /* Layout toggle button (1-column / 2-column) active state on Home */
+        .layout-btn-active {
+            background-color: #bb6a33 !important;
+            border-color: #9c5527 !important;
+            color: #ffffff !important;
         }
 
         /* Settings toggle switch — replaces plain checkboxes with a small
