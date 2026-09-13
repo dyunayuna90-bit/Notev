@@ -30,6 +30,21 @@
         .font-ui-modern { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; }
         .font-handwriting { font-family: 'Caveat', cursive; font-weight: 500; font-size: calc(var(--note-font-size, 18px) * 1.2); letter-spacing: 0.2px; }
         .font-cursive { font-family: 'Dancing Script', cursive; font-size: calc(var(--note-font-size, 18px) * 1.15); }
+        /* "Coretan" note style — Patrick Hand. A print-style (non-joined,
+           non-cursive) handwriting font, deliberately different from every
+           other handwriting option above: Indie Flower/font-typewriter is
+           bouncy and rounded, Caveat/font-handwriting and Dancing
+           Script/font-cursive both lean into a flowing, semi/fully-joined
+           script look. Patrick Hand reads like separate, upright printed
+           letters — closer to genuine handwritten notes than a script. */
+        .font-handwriting2 { font-family: 'Patrick Hand', cursive; font-size: calc(var(--note-font-size, 18px) * 1.02); }
+        /* "Sketsa" note style — Architects Daughter. Also print-style
+           (letters stand apart, not joined), but with a rougher, more
+           sketchy/uneven stroke than Patrick Hand's cleaner print look, so
+           the two new fonts don't end up reading as near-duplicates of
+           each other. Multiplier nudged up slightly since its letterforms
+           render a touch smaller at the same font-size than the others. */
+        .font-handwriting3 { font-family: 'Architects Daughter', cursive; font-size: calc(var(--note-font-size, 18px) * 1.1); }
         .font-title { font-family: 'Cinzel', serif; }
 
         /* Active font-option indicator (Settings page + selection bubble).
@@ -186,14 +201,18 @@
         .paper-aged-effect,
         .paper-aged-effect-preview {
             pointer-events: none;
-            opacity: 0.65;
+            /* Was 0.65 — user found the effect too dark overall. Lowered
+               (and the vignette/blotch alphas below along with it) while
+               keeping every layer in place, so the aged look is still
+               clearly visible, just lighter. */
+            opacity: 0.48;
             mix-blend-mode: multiply;
             background-image:
-                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.32) 0%, rgba(120,86,42,0) 24%),
-                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.28) 0%, rgba(120,86,42,0) 28%),
-                radial-gradient(circle at 68% 8%, rgba(120,86,42,0.20) 0%, rgba(120,86,42,0) 20%),
-                radial-gradient(circle at 6% 86%, rgba(120,86,42,0.22) 0%, rgba(120,86,42,0) 22%),
-                radial-gradient(ellipse at center, rgba(255,248,225,0) 38%, rgba(60,40,20,0.6) 100%),
+                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.26) 0%, rgba(120,86,42,0) 24%),
+                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.22) 0%, rgba(120,86,42,0) 28%),
+                radial-gradient(circle at 68% 8%, rgba(120,86,42,0.16) 0%, rgba(120,86,42,0) 20%),
+                radial-gradient(circle at 6% 86%, rgba(120,86,42,0.18) 0%, rgba(120,86,42,0) 22%),
+                radial-gradient(ellipse at center, rgba(255,248,225,0) 38%, rgba(60,40,20,0.42) 100%),
                 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
             background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
             background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 160px 160px;
@@ -325,12 +344,13 @@
             padding: 0.7rem 0.85rem;
         }
 
-        /* Flat note card used on the Home screen — thin border, sharp
-           corners, no offset/thick shadow. */
+        /* Flat note card used on the Home screen — thin border, gently
+           rounded corners (just enough to soften the edge, not a full
+           rounded-card look), no offset/thick shadow. */
         .office-card-note {
             background-color: #fffcf6;
             border: 1px solid #ddcbb0;
-            border-radius: 2px;
+            border-radius: 8px;
             transition: background-color 0.12s ease;
         }
         .office-card-note:active {
@@ -404,6 +424,55 @@
             -webkit-column-break-inside: avoid;
             width: 100%;
             margin-bottom: 0.75rem;
+        }
+
+        /* Home note-card entrance animation. Applied by
+           UIModule.createNoteCard() every time the list is actually
+           REBUILT — initial load, every search keystroke, and switching
+           the 1-/2-column layout — which is exactly the smoothness the
+           "search filtering" and "layout switching" animations were asked
+           for, from one shared mechanism.
+           Deliberately NOT used for selecting/deselecting a card in batch
+           mode: that path (UIModule.updateCardSelectionVisual) patches
+           only the tapped card's own classes in place instead of
+           rebuilding the list, so this animation never gets a chance to
+           replay on every tap — which is what was causing the whole list
+           to visibly "reload" once per selection before that fix. */
+        @keyframes noteCardEnter {
+            from { opacity: 0; transform: translateY(6px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .note-card-enter {
+            animation: noteCardEnter 0.22s ease-out both;
+        }
+
+        /* Brief crossfade used only while swapping the notes list between
+           1-column and 2-column layout (see UIModule's layout-toggle
+           button handler): the container fades out just before the
+           column classes change, then the cards' own .note-card-enter
+           animation above fades everything back in on the new layout —
+           together this turns what would otherwise be an instant, jarring
+           reflow into a smooth crossfade. */
+        .notes-layout-fading {
+            opacity: 0;
+            transition: opacity 0.12s ease;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .note-card-enter { animation: none; }
+            .notes-layout-fading { transition: none; }
+        }
+
+        /* Hides the scrollbar on the selection bubble's font-style page
+           (now holding 5 fonts + 4 highlight swatches, which can overflow
+           on narrow phones — see #bubblePageFont in index.html) without
+           removing the ability to scroll it. */
+        .bubble-scroll {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .bubble-scroll::-webkit-scrollbar {
+            display: none;
         }
 
         /* Active/selected font-option indicator on the Settings page,
