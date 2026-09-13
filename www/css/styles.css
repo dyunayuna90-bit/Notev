@@ -320,13 +320,23 @@
         }
 
         /* ==========================================================
-           HOME / SETTINGS HEADER — fixed height so switching between
-           #headerDefault <-> #headerSelection (and #headerSettings)
-           never changes the header's height. Every one of these three
-           headers uses this same class, so they're all identical.
+           HOME / SETTINGS HEADER — same min-height + padding formula
+           on all three (#headerDefault, #headerSelection,
+           #headerSettings) so switching between them never changes the
+           header's height. Uses min-height (not a fixed height) so the
+           safe-area inset below can make the box TALLER on a notched
+           device instead of squeezing its own content — a fixed height
+           combined with the safe-area padding-top was what caused the
+           header to hug the notch with no breathing room. Padding-bottom
+           is set explicitly (rather than relying on justify/align) so
+           there's always visible space between the header and the notes
+           list below it, independent of the safe-area's top-only inset.
            ========================================================== */
         .app-home-header {
-            height: 56px;
+            min-height: 56px;
+            box-sizing: border-box;
+            padding-top: calc(env(safe-area-inset-top, 0px) + 0.625rem);
+            padding-bottom: 0.625rem;
         }
 
         /* Search bar — tall capsule/pill, sits centered between the
@@ -529,17 +539,11 @@
     box-sizing: border-box;
 }
 
-/* Each screen's sticky/fixed header now owns the top safe-area inset itself
-   (added on top of its existing Tailwind py-* padding, not replacing it) so
-   its background reaches the true top of the screen instead of leaving a
-   gap. */
-#headerDefault,
-#headerSelection {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 0.625rem);
-}
-#headerSettings {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
-}
+/* #headerDefault, #headerSelection, and #headerSettings all get their
+   top safe-area inset from the shared .app-home-header class above (see
+   css block near .office-card-note) — no per-ID override needed here
+   anymore. Keeping it in one place is what guarantees the three headers
+   always end up exactly the same height. */
 
 /* Editor's floating "more" (kebab) menu — nudged down by the safe-area inset
    plus a bit extra so it clears the notch/status bar instead of sitting
