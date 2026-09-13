@@ -16,7 +16,8 @@
 
             openEditor(noteId = null) {
                 this.activeView = 'editor';
-                history.pushState({ page: 'editor', noteId }, '', '#editor');
+                const method = UIModule.collapseTransientFocusState() ? 'replaceState' : 'pushState';
+                history[method]({ page: 'editor', noteId }, '', '#editor');
                 UIModule.showEditorView(noteId);
             },
 
@@ -29,7 +30,8 @@
 
             openSettings() {
                 this.activeModal = true;
-                history.pushState({ modal: 'settings' }, '', '#settings');
+                const method = UIModule.collapseTransientFocusState() ? 'replaceState' : 'pushState';
+                history[method]({ modal: 'settings' }, '', '#settings');
                 UIModule.toggleModal('settingsModal', true);
             },
 
@@ -41,6 +43,21 @@
             },
 
             handlePopState(state) {
+                // Priority -1: Search bar has focus (keyboard open) — close
+                // just the keyboard/focus first, don't leave the screen yet.
+                if (UIModule.searchFocusPushed) {
+                    UIModule.exitSearchFocus(true);
+                    return;
+                }
+
+                // Priority -0.5: Note title/body has the caret (keyboard
+                // open) — same idea: first back press just closes the
+                // keyboard, a second press is needed to actually leave.
+                if (UIModule.typingFocusPushed) {
+                    UIModule.exitTypingFocus(true);
+                    return;
+                }
+
                 // Priority 0: Exit batch selection mode on the home screen
                 if (UIModule.selectionMode) {
                     UIModule.exitSelectionMode(true);
