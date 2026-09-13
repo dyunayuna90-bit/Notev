@@ -159,9 +159,9 @@ jobs:
                   super.onCreate(savedInstanceState);
 
                   // Render content behind the notch/camera cutout instead of
-                  // letterboxing around it (paired with the CSS
-                  // env(safe-area-inset-*) padding in styles.css so the
-                  // actual UI still avoids sitting under the cutout).
+                  // letterboxing around it (paired with the CSS safe-area
+                  // padding below so the actual UI still avoids sitting
+                  // under the cutout).
                   if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                       getWindow().getAttributes().layoutInDisplayCutoutMode =
                           WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
@@ -177,32 +177,39 @@ jobs:
                       WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                   );
 
-                  // --- Keyboard (IME) inset fix ---
-                  // setDecorFitsSystemWindows(false) above (needed for the
-                  // edge-to-edge immersive look) makes Android stop
-                  // automatically resizing the window when the soft
-                  // keyboard opens — "adjustResize" no longer applies once
-                  // the app manages its own insets. From that point on, the
-                  // WebView is only told the keyboard's real height through
-                  // the web page's own `visualViewport` API, and different
-                  // Android/WebView versions + OEM keyboards report that
-                  // resize with different timing/reliability — sometimes a
-                  // beat late, sometimes not at all while a suggestion
-                  // strip is animating in/out. That's the actual cause of
-                  // the editor "letting go" of the keyboard mid-typing.
-                  // Reading the IME inset straight from WindowInsetsCompat
-                  // (the OS's own authoritative number) and applying it as
-                  // real bottom padding on the WebView's parent removes
-                  // that dependency entirely: the content is physically
-                  // pushed up by exactly the keyboard's height, on every
-                  // device, independent of whether the WebView's own resize
-                  // signal is timely or not.
+                  // --- Cutout / status-bar inset -> CSS variable ---
+                  // CSS's own env(safe-area-inset-top) is NOT reliably
+                  // populated by Capacitor's Android WebView the way it is
+                  // by iOS's WKWebView, so the header kept hugging the notch
+                  // even with viewport-fit=cover already set. Reading the
+                  // cutout/status-bar inset here — the OS's own
+                  // authoritative number — and pushing it into the page as
+                  // a CSS custom property guarantees the header always
+                  // knows the real notch height on every device, instead of
+                  // hoping the WebView exposes it on its own.
                   View rootView = findViewById(android.R.id.content);
                   ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
-                      int imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
-                      v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), imeBottom);
+                      Insets bars = insets.getInsets(
+                          WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.statusBars());
+                      String js = String.format(
+                          "document.documentElement.style.setProperty('--native-inset-top','%dpx');",
+                          bars.top);
+                      bridge.getWebView().evaluateJavascript(js, null);
                       return insets;
                   });
+
+                  // --- Keyboard (IME) ---
+                  // Deliberately NOT handled natively anymore. index.html's
+                  // viewport meta already has interactive-widget=resizes-content,
+                  // which resizes the page's own visual viewport whenever the
+                  // keyboard opens — a browser-level resize. The removed code
+                  // used to ALSO pad this same content view by the IME's
+                  // height on top of that, so the page was being resized
+                  // twice, by two independent, differently-timed mechanisms —
+                  // that double resize is what made the screen jump/flicker
+                  // right as the keyboard opened. The keyboard is now left
+                  // entirely to the web layer; only the cutout is handled
+                  // natively here.
               }
           }
           EOF
