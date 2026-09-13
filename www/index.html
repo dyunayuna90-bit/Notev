@@ -394,6 +394,26 @@
     <!-- App scripts, in dependency order. Kept as plain <script> tags (no
          bundler/build step needed) so this still runs by just opening
          index.html, exactly like the old single-file version did. -->
+    <!-- TEMPORARY DEBUG BADGE — remove once the notch/header inset bug is
+         confirmed fixed. Shows the live value of --native-inset-top (set by
+         MainActivity.java) so we can tell from a screenshot whether the
+         native → CSS injection is actually landing, instead of guessing
+         blind at native Android inset behavior. -->
+    <div id="debugInsetBadge" style="position:fixed; top:0; left:0; z-index:99999; background:#c0392b; color:#fff; font:11px monospace; padding:2px 5px; pointer-events:none;">-</div>
+    <script>
+        (function () {
+            function updateDebugBadge() {
+                var el = document.getElementById('debugInsetBadge');
+                if (!el) return;
+                var cs = getComputedStyle(document.documentElement);
+                var native = cs.getPropertyValue('--native-inset-top').trim();
+                el.textContent = 'native-inset-top: ' + (native || '(unset)');
+            }
+            updateDebugBadge();
+            setInterval(updateDebugBadge, 300);
+        })();
+    </script>
+
     <script src="js/storage.js"></script>
     <script src="js/undo-redo.js"></script>
     <script src="js/navigation.js"></script>
