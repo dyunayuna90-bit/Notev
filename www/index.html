@@ -32,7 +32,16 @@
     <!-- App styles (everything that used to be an inline <style> block) -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-office-bg text-office-text font-ui-modern h-screen flex flex-col justify-between relative overflow-x-hidden">
+<!-- Shell uses `fixed inset-0` (pinned to the real device viewport) instead
+     of Tailwind's h-screen (height:100vh). 100vh is meant to be constant,
+     but on some Android WebViews it gets recalculated off the *document's*
+     rendered height rather than the true viewport — so filtering the notes
+     list down to just 1-2 short cards shrinks the document, which shrank
+     100vh right along with it, making the whole header+list visibly shrink
+     and re-center instead of staying pinned to the top of a full-height
+     screen. `fixed inset-0` sizes purely from the viewport, never from
+     document content, so it can't do that regardless of note count. -->
+<body class="bg-office-bg text-office-text font-ui-modern fixed inset-0 flex flex-col justify-between overflow-x-hidden">
 
     <!-- Optional Aged Paper Overlay -->
     <div id="agedPaperOverlay" class="paper-aged-effect hidden"></div>
@@ -41,7 +50,7 @@
     <div id="eyeProtectionOverlay" class="eye-protection-overlay hidden"></div>
 
     <!-- MAIN APP STRUCTURE CONTAINER -->
-    <div id="appRoot" class="w-full h-screen flex flex-col relative overflow-hidden">
+    <div id="appRoot" class="w-full h-full flex flex-col relative overflow-hidden">
 
         <!-- VIEW 1: NOTES LIST VIEW (Full width dashboard) -->
         <section id="viewNotesList" class="momentum-scroll flex-1 flex flex-col h-full overflow-y-auto relative">
