@@ -17,6 +17,28 @@ tailwind.config = {
                     accent: '#8c3a2b',
                     border: '#b8a686',
                     muted: '#6b5e52'
+                },
+                // "office" palette — used by the Home (notes list) and
+                // Settings screens (flat Office-Mobile style redesign).
+                // Was previously only defined in tailwind_config (the
+                // Node/CLI config used to pre-compile CSS for the APK
+                // build), NOT here — so every bg-office-*/text-office-*/
+                // border-office-* class silently failed to render (no
+                // color at all) whenever the app was opened directly as a
+                // PWA/in-browser instead of the packaged APK. Keep this
+                // block in sync with the "office" block in tailwind_config
+                // by hand whenever one changes.
+                office: {
+                    bg: '#f1e7d8',
+                    surface: '#fffcf6',
+                    header: '#7a4a30',
+                    headerDark: '#5f3a25',
+                    accent: '#bb6a33',
+                    accentDark: '#9c5527',
+                    text: '#3a2c22',
+                    muted: '#8a7864',
+                    border: '#ddcbb0',
+                    divider: '#e9dcc5'
                 }
             }
         }
