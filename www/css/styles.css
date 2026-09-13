@@ -235,28 +235,15 @@
             transform: translateX(8px);
         }
 
-        /* Button Retro Shadow Effect
-           Softened from the old flat comic-book offset (hard 3px/1px block
-           shadow, instant snap) to a shorter, rounder shadow that eases in
-           and settles with a tiny spring on release — reads as "vintage"
-           through the warm border color, but the motion itself feels
-           current rather than clunky. Kept as one shared class (home
-           header icons, note cards, settings buttons) so every tappable
-           surface in those two screens presses the exact same way. */
+        /* Button Retro Shadow Effect */
         .btn-retro {
             border: 2px solid #2c221e;
-            box-shadow: 0 2px 0 #2c221e, 0 3px 8px rgba(44, 34, 30, 0.12);
-            transition: transform 0.16s cubic-bezier(.34,1.56,.64,1), box-shadow 0.16s ease;
+            box-shadow: 3px 3px 0px #2c221e;
+            transition: all 0.1s ease;
         }
         .btn-retro:active {
-            transform: translateY(2px) scale(0.97);
-            box-shadow: 0 0 0 #2c221e, 0 1px 3px rgba(44, 34, 30, 0.12);
-            transition: transform 0.08s ease, box-shadow 0.08s ease;
-        }
-        @media (hover: hover) {
-            .btn-retro:hover {
-                box-shadow: 0 3px 0 #2c221e, 0 5px 12px rgba(44, 34, 30, 0.16);
-            }
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #2c221e;
         }
 
         /* Settings toggle switch — replaces plain checkboxes with a small
@@ -283,7 +270,7 @@
             inset: 0;
             background-color: #b8a686;
             border-radius: 999px;
-            transition: background-color 0.22s ease;
+            transition: background-color 0.18s ease;
         }
         .toggle-switch .toggle-track::before {
             content: "";
@@ -293,7 +280,7 @@
             background-color: #fcf8ec;
             border-radius: 50%;
             box-shadow: 0 1px 2px rgba(0,0,0,0.35);
-            transition: transform 0.28s cubic-bezier(.34,1.56,.64,1);
+            transition: transform 0.18s ease;
         }
         .toggle-switch input:checked + .toggle-track {
             background-color: #8c3a2b;
@@ -301,48 +288,33 @@
         .toggle-switch input:checked + .toggle-track::before {
             transform: translateX(16px);
         }
-        /* Small squash-and-stretch on the knob itself right at the moment
-           of toggling, so flipping a switch reads as a distinct little
-           action rather than a static color swap. */
-        .toggle-switch input:active + .toggle-track::before {
-            width: 22px;
-        }
 
         /* Settings section card — one consistent container style (icon +
            label header, divided rows inside) used for every settings
-           group, instead of each group inventing its own spacing/border.
-           Border swapped for a soft ambient shadow so the cards read as
-           gently raised paper rather than boxed-in, and each row gets its
-           own quiet press/hover feedback so the whole settings screen
-           feels responsive to touch, not just decorative. */
+           group, instead of each group inventing its own spacing/border. */
         .settings-card {
             background-color: #e8dbb8;
             border: 1px solid #b8a686;
-            border-radius: 1rem;
+            border-radius: 0.85rem;
             overflow: hidden;
-            box-shadow: 0 1px 2px rgba(44,34,30,0.06), 0 4px 14px rgba(44,34,30,0.06);
         }
         .settings-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 0.75rem;
-            padding: 0.75rem 0.9rem;
-            transition: background-color 0.15s ease;
+            padding: 0.7rem 0.85rem;
         }
         .settings-row + .settings-row {
             border-top: 1px solid rgba(184, 166, 134, 0.5);
         }
         .settings-row-body {
-            padding: 0.75rem 0.9rem;
+            padding: 0.7rem 0.85rem;
         }
         .settings-row-body + .settings-row-body,
         .settings-row-body + .settings-row,
         .settings-row + .settings-row-body {
             border-top: 1px solid rgba(184, 166, 134, 0.5);
-        }
-        label.settings-row:active {
-            background-color: rgba(140, 58, 43, 0.06);
         }
 
 /* ==========================================================================
@@ -410,139 +382,4 @@
 #selectionBubble {
     margin-left: env(safe-area-inset-left, 0px);
     margin-right: env(safe-area-inset-right, 0px);
-}
-
-/* ==========================================================================
-   HOME & SETTINGS — visual + motion refresh
-   Scoped entirely to the notes-list ("home") and settings screens. The
-   editor/paper/note-content styles above are untouched on purpose. No
-   blur, no glass, no gradients here — just calmer surfaces, consistent
-   easing, and small, deliberate motion so every tap gives clear feedback
-   without adding visual noise.
-   ========================================================================== */
-
-:root {
-    /* One shared easing curve for anything that "settles" (cards, sheets,
-       toggles) — a gentle overshoot so motion feels alive without being
-       bouncy/cartoonish. Anything that just needs to disappear quickly
-       (press states) uses a plain ease instead. */
-    --ease-settle: cubic-bezier(.22, 1, .36, 1);
-}
-
-/* Sticky header gets a soft contact shadow only once content has actually
-   scrolled under it — set by ui.js via the .is-elevated class — instead of
-   a permanent heavy shadow sitting on the header at rest. */
-#headerDefault, #headerSelection {
-    box-shadow: 0 1px 0 rgba(44,34,30,0.08);
-    transition: box-shadow 0.2s ease;
-}
-#headerDefault.is-elevated, #headerSelection.is-elevated {
-    box-shadow: 0 4px 10px rgba(44,34,30,0.10);
-}
-
-/* Search field: quiet by default, calm amber focus ring instead of a hard
-   snap — this is the first thing a thumb touches on Home, so it should
-   feel the most polished. */
-#searchInput {
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
-}
-#searchInput:focus {
-    background-color: #fff;
-    border-color: #8c3a2b;
-}
-
-/* Note cards — replaces the flat comic-shadow look with a soft, layered
-   elevation that lifts slightly further on press instead of just
-   flattening, and a short fade+rise on first appearance so a freshly
-   rendered list doesn't just pop into place. Each card reads its stagger
-   delay from --stagger (set inline by ui.js) so cards near the top settle
-   fractionally before ones further down — recognizable as "the list
-   arrived together" rather than a strict waterfall. */
-.note-card {
-    border: 1px solid rgba(44,34,30,0.14);
-    border-radius: 1rem;
-    box-shadow: 0 1px 2px rgba(44,34,30,0.06), 0 6px 16px rgba(44,34,30,0.08);
-    transition: transform 0.18s var(--ease-settle), box-shadow 0.18s var(--ease-settle);
-    animation: cardEnter 0.42s var(--ease-settle) both;
-    animation-delay: calc(var(--stagger, 0) * 45ms);
-}
-.note-card:active {
-    transform: scale(0.975);
-    box-shadow: 0 1px 1px rgba(44,34,30,0.08);
-}
-@media (hover: hover) {
-    .note-card:hover {
-        box-shadow: 0 2px 4px rgba(44,34,30,0.08), 0 10px 22px rgba(44,34,30,0.10);
-    }
-}
-
-@keyframes cardEnter {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Settings sections fade/rise in the same way, staggered by section order
-   (Kertas, Teks, Efek & Kenyamanan, Data — see .settings-section in
-   index.html), so opening Settings feels like one calm reveal instead of
-   a static page that was just always there. */
-.settings-section {
-    animation: cardEnter 0.36s var(--ease-settle) both;
-}
-.settings-section:nth-of-type(1) { animation-delay: 0ms; }
-.settings-section:nth-of-type(2) { animation-delay: 45ms; }
-.settings-section:nth-of-type(3) { animation-delay: 90ms; }
-.settings-section:nth-of-type(4) { animation-delay: 135ms; }
-
-/* Settings page itself slides up + fades in when opened (class is added
-   and cleared by UIModule.toggleModal). Closing stays instant, matching
-   the immediacy of a hardware back-press. */
-#settingsModal.modal-animate-in {
-    animation: sheetEnter 0.3s var(--ease-settle) both;
-}
-@keyframes sheetEnter {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Font-option / paper-style choice buttons on Settings: quick press
-   feedback so picking a style feels tactile rather than just a color
-   swap on release. */
-.btnFontOption, #paperVintageLabel, #paperWhiteLabel {
-    transition: transform 0.12s ease, border-color 0.15s ease, background-color 0.15s ease;
-}
-.btnFontOption:active, #paperVintageLabel:active, #paperWhiteLabel:active {
-    transform: scale(0.96);
-}
-
-/* Floating "new note" button — softened shadow to match the rest of the
-   refresh, with a touch more spring on release than the generic btn-retro
-   press so the primary action on the whole screen stands out. */
-#btnNewNote {
-    transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s ease;
-    box-shadow: 0 4px 0 #2c221e, 0 8px 18px rgba(44,34,30,0.22);
-}
-#btnNewNote:active {
-    transform: scale(0.92) translateY(2px);
-    box-shadow: 0 1px 0 #2c221e, 0 3px 8px rgba(44,34,30,0.18);
-}
-
-/* Toast — was an instant show/hide; now a short rise+fade on the way in.
-   Uses a keyframe animation (not a transition) since the element goes
-   from display:none to visible: a transition can't interpolate across
-   that jump, but an animation still plays its 0%-state immediately once
-   the element is actually rendered. */
-#toast:not(.hidden) {
-    animation: toastEnter 0.26s var(--ease-settle) both;
-}
-@keyframes toastEnter {
-    from { opacity: 0; transform: translate(-50%, 10px); }
-    to   { opacity: 1; transform: translate(-50%, 0); }
-}
-
-/* Respect reduced-motion preferences: keep the feedback (shadows, color)
-   but drop the entrance choreography entirely. */
-@media (prefers-reduced-motion: reduce) {
-    .note-card, .settings-section, #settingsModal.modal-animate-in {
-        animation: none !important;
-    }
 }
