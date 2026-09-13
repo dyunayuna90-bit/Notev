@@ -43,6 +43,7 @@
             },
 
             init() {
+                this.applyListLayout(StorageModule.getSettings().noteListColumns);
                 this.renderNotesList();
 
                 // Button Event Listeners
@@ -82,6 +83,39 @@
                 document.getElementById('btnCancelSelect').addEventListener('click', () => this.exitSelectionMode());
                 document.getElementById('btnDeleteSelected').addEventListener('click', () => this.deleteSelected());
                 document.getElementById('btnPinSelected').addEventListener('click', () => this.togglePinSelected());
+
+                // Home-screen layout toggle (1 column <-> 2 columns).
+                // Purely a display preference for the notes list — has no
+                // effect on the editor/canvas.
+                document.getElementById('btnToggleLayout').addEventListener('click', () => {
+                    const s = StorageModule.getSettings();
+                    s.noteListColumns = s.noteListColumns === 2 ? 1 : 2;
+                    StorageModule.saveSettings(s);
+                    this.applyListLayout(s.noteListColumns);
+                    this.renderNotesList(document.getElementById('searchInput').value.toLowerCase());
+                });
+            },
+
+            // Toggles the notes/pinned grid between 1 and 2 columns and
+            // swaps the header button's icon + title to reflect the
+            // CURRENT state (so the icon shown is the layout you're on,
+            // not the one you'd switch to — matches how this pattern reads
+            // in Office mobile apps).
+            applyListLayout(columns) {
+                const cols = columns === 2 ? 2 : 1;
+                const notesContainer = document.getElementById('notesContainer');
+                const pinnedContainer = document.getElementById('pinnedContainer');
+                [notesContainer, pinnedContainer].forEach(el => {
+                    el.classList.remove('grid-cols-1', 'grid-cols-2');
+                    el.classList.add(cols === 2 ? 'grid-cols-2' : 'grid-cols-1');
+                });
+
+                const btn = document.getElementById('btnToggleLayout');
+                const iconSingle = document.getElementById('iconLayoutSingle');
+                const iconGrid = document.getElementById('iconLayoutGrid');
+                iconSingle.classList.toggle('hidden', cols === 2);
+                iconGrid.classList.toggle('hidden', cols !== 2);
+                btn.title = cols === 2 ? 'Tampilan 2 kolom (ketuk untuk 1 kolom)' : 'Tampilan 1 kolom (ketuk untuk 2 kolom)';
             },
 
             renderNotesList(filter = '') {
@@ -138,8 +172,10 @@
                 // always matches the actual paper color used in the editor —
                 // that's what makes the open/close morph look like the card is
                 // really stretching into the page instead of just a generic
-                // animated rectangle.
-                card.className = `btn-retro p-4 rounded-md flex flex-col justify-between cursor-pointer transition-shadow relative select-none ${isSelected ? 'ring-4 ring-vintage-accent brightness-95' : ''}`;
+                // animated rectangle. Everything ELSE about the card (border,
+                // font, badges) is the new flat Office-Mobile style — only the
+                // morph-target background color still has to match the editor.
+                card.className = `office-card-note font-ui-modern p-4 flex flex-col justify-between cursor-pointer relative select-none ${isSelected ? 'ring-2 ring-office-accent' : ''}`;
                 card.style.backgroundColor = SettingsModule.getPaperColor();
                 card.dataset.noteId = note.id;
 
@@ -149,12 +185,12 @@
                 const plainText = tempDiv.textContent || tempDiv.innerText || 'Tidak ada teks...';
 
                 const pinBadge = note.pinned ? `
-                    <div class="absolute -top-2 -right-2 w-6 h-6 bg-vintage-accent text-white rounded-full flex items-center justify-center border-2 border-vintage-dark shadow-md">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
+                    <div class="absolute top-2 right-2 w-5 h-5 bg-office-accent text-white rounded-sm flex items-center justify-center">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
                     </div>` : '';
 
                 const selectionDot = this.selectionMode ? `
-                    <div class="w-5 h-5 mt-0.5 rounded-full border-2 border-vintage-dark flex items-center justify-center shrink-0 ${isSelected ? 'bg-vintage-accent border-vintage-accent' : 'bg-vintage-paper'}">
+                    <div class="w-5 h-5 mt-0.5 rounded-sm border border-office-border flex items-center justify-center shrink-0 ${isSelected ? 'bg-office-accent border-office-accent' : 'bg-office-surface'}">
                         ${isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
                     </div>` : '';
 
@@ -163,13 +199,13 @@
                     <div class="flex items-start gap-2">
                         ${selectionDot}
                         <div class="min-w-0 flex-1">
-                            <h2 class="font-title text-base font-bold text-vintage-dark line-clamp-1 border-b border-vintage-border pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
-                            <p class="font-handwriting text-xs text-vintage-muted line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
+                            <h2 class="text-sm font-semibold text-office-text line-clamp-1 border-b border-office-divider pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
+                            <p class="text-xs text-office-muted line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center text-[10px] text-vintage-muted pt-2 border-t border-vintage-border/50">
+                    <div class="flex justify-between items-center text-[10px] text-office-muted pt-2 border-t border-office-divider">
                         <span>${note.updatedAt || ''}</span>
-                        <span class="font-bold uppercase tracking-wider text-vintage-accent">${this.selectionMode ? '' : 'Buka &rarr;'}</span>
+                        <span class="font-semibold uppercase tracking-wider text-office-accent">${this.selectionMode ? '' : 'Buka &rarr;'}</span>
                     </div>
                 `;
 
