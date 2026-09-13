@@ -15,6 +15,23 @@
                 this.editorArea.addEventListener('input', () => {
                     this.onEditorInput();
                     this.scrollCaretIntoView();
+                    // Re-check one frame later. On Android, typing slowly
+                    // (long pauses between characters) gives Gboard/other
+                    // keyboards time to quietly resize their own predictive-
+                    // text suggestion strip between taps — a small height
+                    // change that doesn't always fire a visualViewport
+                    // 'resize' event before this handler already ran once.
+                    // The immediate call above can end up measuring the
+                    // caret against a keyboard height that's a beat out of
+                    // date; this follow-up catches it against whatever the
+                    // keyboard's height actually settles to. This is the
+                    // fix for "keyboard stops following the caret, only
+                    // happens typing slowly, only near the first lines" —
+                    // pressing Enter or nudging a manual scroll "fixed" it
+                    // before only because either one forces a fresh
+                    // measurement anyway, not because anything was actually
+                    // reset.
+                    requestAnimationFrame(() => this.scrollCaretIntoView());
                 });
                 this.titleInput.addEventListener('input', () => this.saveCurrentNote());
 
@@ -163,6 +180,22 @@
                 const range = sel.getRangeAt(0).cloneRange();
                 range.collapse(true);
                 let rect = range.getBoundingClientRect();
+
+                // getBoundingClientRect() on a COLLAPSED range can come back
+                // as an empty/all-zero rect for a beat right at a soft
+                // line-wrap boundary — most noticeable at the very first
+                // lines of a note, where a line is still actively wrapping
+                // as each new character is typed. getClientRects() (plural)
+                // asks the browser for the actual per-line-box rects the
+                // range touches instead of one merged box, and reliably
+                // returns a real rect in exactly the cases where the
+                // singular version comes back empty — catching the caret-
+                // follow drop before it ever reaches the "empty line"
+                // fallback below (which assumes a genuinely empty line, not
+                // just a momentarily-empty measurement).
+                if ((!rect || (rect.top === 0 && rect.bottom === 0)) && range.getClientRects().length > 0) {
+                    rect = range.getClientRects()[0];
+                }
 
                 // A collapsed range at an empty line (e.g. right after pressing
                 // Enter, or the very first tap into a blank note) reports an
@@ -329,7 +362,7 @@
                 if (!selection.rangeCount) return;
                 const range = selection.getRangeAt(0);
 
-                const fontClasses = ['font-typewriter', 'font-handwriting', 'font-cursive'];
+                const fontClasses = ['font-typewriter', 'font-handwriting', 'font-cursive', 'font-handwriting2', 'font-handwriting3'];
                 let ancestor = range.startContainer;
                 while (ancestor && ancestor !== this.editorArea) {
                     if (ancestor.nodeType === 1 && fontClasses.some(c => ancestor.classList.contains(c))) break;
@@ -386,7 +419,7 @@
             // of nesting inside it (nesting caused compounding font sizes and
             // stale inner styles bleeding through).
             stripFontClasses(fragment) {
-                const fontClasses = ['font-typewriter', 'font-handwriting', 'font-cursive'];
+                const fontClasses = ['font-typewriter', 'font-handwriting', 'font-cursive', 'font-handwriting2', 'font-handwriting3'];
 
                 const unwrap = (el) => {
                     fontClasses.forEach(c => el.classList.remove(c));
@@ -400,7 +433,7 @@
                 };
 
                 // Nested occurrences anywhere inside the fragment
-                Array.from(fragment.querySelectorAll('.font-typewriter, .font-handwriting, .font-cursive')).forEach(unwrap);
+                Array.from(fragment.querySelectorAll('.font-typewriter, .font-handwriting, .font-cursive, .font-handwriting2, .font-handwriting3')).forEach(unwrap);
 
                 // Top-level children can themselves carry a font class when the
                 // selection cut across the edge of an existing styled span.
