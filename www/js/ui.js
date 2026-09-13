@@ -19,6 +19,10 @@
             // immediately leaving the search bar / the note.
             searchFocusPushed: false,
             typingFocusPushed: false,
+            _searchFocusPending: false,
+            _searchFocusTimer: null,
+            _typingFocusPending: false,
+            _typingFocusTimer: null,
 
             // "Lihat Penuh" (full view) state for the editor — a read-only,
             // chrome-free way to re-read a note: no three-dot menu, no
@@ -444,10 +448,26 @@
             },
 
             // --- Search bar: back button closes it before leaving the screen ---
+            //
+            // The pushState below is deliberately delayed until AFTER the
+            // on-screen keyboard's open animation has settled (350ms, same
+            // ballpark as EditorModule's own keyboard-aware scroll timing).
+            // Pushing a history entry the INSTANT the input focuses —
+            // exactly when the keyboard starts animating in and the
+            // viewport is resizing — was fighting with that resize and is
+            // what caused the screen to jump/blink. The short delay costs
+            // nothing visible; the keyboard is still opening anyway.
             enterSearchFocus() {
-                if (this.searchFocusPushed) return;
-                this.searchFocusPushed = true;
-                history.pushState({ mode: 'searchFocus' }, '', '#search');
+                if (this.searchFocusPushed || this._searchFocusPending) return;
+                this._searchFocusPending = true;
+                clearTimeout(this._searchFocusTimer);
+                this._searchFocusTimer = setTimeout(() => {
+                    this._searchFocusPending = false;
+                    if (document.activeElement === document.getElementById('searchInput')) {
+                        this.searchFocusPushed = true;
+                        history.pushState({ mode: 'searchFocus' }, '', '#search');
+                    }
+                }, 350);
             },
 
             // fromPopState is true when this was called because the
@@ -457,6 +477,8 @@
             // focus because the user tapped elsewhere) we pop it ourselves,
             // matching the same convention exitSelectionMode uses below.
             exitSearchFocus(fromPopState = false) {
+                clearTimeout(this._searchFocusTimer);
+                this._searchFocusPending = false;
                 if (!this.searchFocusPushed) return;
                 this.searchFocusPushed = false;
                 document.getElementById('searchInput').blur();
@@ -476,13 +498,30 @@
 
             // --- Note title/body: back button closes the caret/keyboard
             // before leaving the note ---
+            //
+            // Same delayed-push reasoning as enterSearchFocus above — this
+            // is the exact focus event that opens the keyboard over the
+            // note editor, so the pushState is deferred past the keyboard's
+            // open animation instead of firing in the same instant as it.
             enterTypingFocus() {
-                if (this.typingFocusPushed) return;
-                this.typingFocusPushed = true;
-                history.pushState({ mode: 'typingFocus' }, '', '#typing');
+                if (this.typingFocusPushed || this._typingFocusPending) return;
+                this._typingFocusPending = true;
+                clearTimeout(this._typingFocusTimer);
+                this._typingFocusTimer = setTimeout(() => {
+                    this._typingFocusPending = false;
+                    const active = document.activeElement;
+                    const titleEl = document.getElementById('noteTitleInput');
+                    const editorEl = document.getElementById('editorArea');
+                    if (active === titleEl || active === editorEl) {
+                        this.typingFocusPushed = true;
+                        history.pushState({ mode: 'typingFocus' }, '', '#typing');
+                    }
+                }, 350);
             },
 
             exitTypingFocus(fromPopState = false) {
+                clearTimeout(this._typingFocusTimer);
+                this._typingFocusPending = false;
                 if (!this.typingFocusPushed) return;
                 this.typingFocusPushed = false;
                 document.getElementById('noteTitleInput').blur();
