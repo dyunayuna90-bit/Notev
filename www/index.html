@@ -18,7 +18,7 @@
     <!-- Google Fonts Vintage & Handwriting -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Cinzel:wght@600;700;800&family=Dancing+Script:wght@500;700&family=Indie+Flower&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@400;500;600;700&family=Cinzel:wght@600;700;800&family=Dancing+Script:wght@500;700&family=Indie+Flower&family=Patrick+Hand&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS CDN + theme config
          NOTE: for the native Android build, the GitHub Actions workflow
@@ -86,6 +86,9 @@
                 <div class="flex items-center gap-1 shrink-0">
                     <button id="btnPinSelected" class="icon-btn-plain opacity-40 transition-opacity" title="Sematkan / lepas sematan">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
+                    </button>
+                    <button id="btnCopySelected" class="icon-btn-plain opacity-40 transition-opacity" title="Gandakan catatan terpilih">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="1"/><path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/></svg>
                     </button>
                     <button id="btnDeleteSelected" class="icon-btn-plain opacity-40 transition-opacity" title="Hapus catatan terpilih">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
@@ -209,19 +212,21 @@
         </div>
 
         <!-- Page 2: Font style + highlight options (collapsed by default, opened via the ">" button) -->
-        <div id="bubblePageFont" class="hidden items-center space-x-1">
-            <button id="bubbleFontPageBack" class="px-1.5 py-1 hover:bg-vintage-muted rounded" title="Kembali">
+        <div id="bubblePageFont" class="hidden items-center space-x-1 overflow-x-auto max-w-[82vw] bubble-scroll">
+            <button id="bubbleFontPageBack" class="px-1.5 py-1 hover:bg-vintage-muted rounded shrink-0" title="Kembali">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-            <span class="w-px h-4 bg-vintage-muted"></span>
-            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter" title="Anak-Anak">Ab</button>
-            <button data-bubble-font="font-handwriting" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting" title="Tulisan Tangan">Ab</button>
-            <button data-bubble-font="font-cursive" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-cursive" title="Sambung">Ab</button>
-            <span class="w-px h-4 bg-vintage-muted"></span>
-            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#fde047" title="Stabilo Kuning" style="background-color:#fde047"></button>
-            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#f9a8d4" title="Stabilo Pink" style="background-color:#f9a8d4"></button>
-            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper" data-color="#86efac" title="Stabilo Hijau" style="background-color:#86efac"></button>
-            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper bg-vintage-dark flex items-center justify-center" data-color="transparent" title="Hapus Stabilo">
+            <span class="w-px h-4 bg-vintage-muted shrink-0"></span>
+            <button data-bubble-font="font-typewriter" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-typewriter shrink-0" title="Anak-Anak">Ab</button>
+            <button data-bubble-font="font-handwriting" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting shrink-0" title="Tulisan Tangan">Ab</button>
+            <button data-bubble-font="font-cursive" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-cursive shrink-0" title="Sambung">Ab</button>
+            <button data-bubble-font="font-handwriting2" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting2 shrink-0" title="Coretan">Ab</button>
+            <button data-bubble-font="font-handwriting3" class="btnBubbleFont px-1.5 py-1 hover:bg-vintage-muted rounded font-handwriting3 shrink-0" title="Sketsa">Ab</button>
+            <span class="w-px h-4 bg-vintage-muted shrink-0"></span>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper shrink-0" data-color="#fde047" title="Stabilo Kuning" style="background-color:#fde047"></button>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper shrink-0" data-color="#f9a8d4" title="Stabilo Pink" style="background-color:#f9a8d4"></button>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper shrink-0" data-color="#86efac" title="Stabilo Hijau" style="background-color:#86efac"></button>
+            <button class="btnHighlight w-5 h-5 rounded-full border-2 border-vintage-paper bg-vintage-dark flex items-center justify-center shrink-0" data-color="transparent" title="Hapus Stabilo">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
@@ -319,6 +324,8 @@
                                 <button data-font="font-typewriter" class="btnFontOption px-2 py-2 text-xs font-typewriter bg-office-surface border border-office-border rounded-sm text-center">Anak-Anak</button>
                                 <button data-font="font-handwriting" class="btnFontOption px-2 py-2 text-sm font-handwriting bg-office-surface border border-office-border rounded-sm text-center">Tulisan Tangan</button>
                                 <button data-font="font-cursive" class="btnFontOption px-2 py-2 text-sm font-cursive bg-office-surface border border-office-border rounded-sm text-center">Sambung</button>
+                                <button data-font="font-handwriting2" class="btnFontOption px-2 py-2 text-sm font-handwriting2 bg-office-surface border border-office-border rounded-sm text-center">Coretan</button>
+                                <button data-font="font-handwriting3" class="btnFontOption px-2 py-2 text-sm font-handwriting3 bg-office-surface border border-office-border rounded-sm text-center">Sketsa</button>
                             </div>
                         </div>
                         <div class="office-row-body">
