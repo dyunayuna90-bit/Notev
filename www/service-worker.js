@@ -3,7 +3,7 @@
 // completely offline after the first successful load. Bump CACHE_NAME any
 // time you change a cached file's content — that's what forces old clients
 // to fetch the new version instead of serving a stale cached copy forever.
-const CACHE_NAME = 'vinote-cache-v6';
+const CACHE_NAME = 'vinote-cache-v7';
 
 // Local app-shell files. These are fetched and cached individually (not via
 // cache.addAll) so that ONE missing/renamed file — e.g. an icon you haven't
