@@ -146,7 +146,6 @@ jobs:
           import android.os.Bundle;
           import android.view.View;
           import android.view.WindowManager;
-          import androidx.core.graphics.Insets;
           import androidx.core.view.ViewCompat;
           import androidx.core.view.WindowCompat;
           import androidx.core.view.WindowInsetsCompat;
@@ -154,6 +153,8 @@ jobs:
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
+              private int lastInsetTop = -1;
+
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -177,24 +178,45 @@ jobs:
                       WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                   );
 
-                  // --- Cutout / status-bar inset -> CSS variable ---
+                  // --- Cutout inset -> CSS variable ---
                   // CSS's own env(safe-area-inset-top) is NOT reliably
                   // populated by Capacitor's Android WebView the way it is
                   // by iOS's WKWebView, so the header kept hugging the notch
                   // even with viewport-fit=cover already set. Reading the
-                  // cutout/status-bar inset here — the OS's own
-                  // authoritative number — and pushing it into the page as
-                  // a CSS custom property guarantees the header always
-                  // knows the real notch height on every device, instead of
-                  // hoping the WebView exposes it on its own.
+                  // cutout inset here — the OS's own authoritative number —
+                  // and pushing it into the page as a CSS custom property
+                  // guarantees the header always knows the real notch
+                  // height on every device, instead of hoping the WebView
+                  // exposes it on its own.
+                  //
+                  // Only displayCutout() is read here — NOT statusBars().
+                  // statusBars() fluctuates while the keyboard opens/closes
+                  // (many devices transiently reveal the status bar while
+                  // the IME is focused, even with it hidden via the
+                  // controller above), which made the header's height
+                  // visibly jump every time the search bar was tapped or
+                  // typed into. displayCutout() is the physical notch —
+                  // a fixed value that never changes with the keyboard.
+                  //
+                  // This listener still re-fires on every inset dispatch,
+                  // including IME toggles, since that's one shared
+                  // WindowInsets callback for the whole content view. The
+                  // guard below only pushes the value into the WebView when
+                  // it actually changed, instead of re-running
+                  // evaluateJavascript (and forcing the sticky header to
+                  // restyle) on every single one of those redundant calls —
+                  // that repeated restyling while typing in search is what
+                  // was leaving the header's background only half-painted.
                   View rootView = findViewById(android.R.id.content);
                   ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
-                      Insets bars = insets.getInsets(
-                          WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.statusBars());
-                      String js = String.format(
-                          "document.documentElement.style.setProperty('--native-inset-top','%dpx');",
-                          bars.top);
-                      bridge.getWebView().evaluateJavascript(js, null);
+                      int top = insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top;
+                      if (top != lastInsetTop) {
+                          lastInsetTop = top;
+                          String js = String.format(
+                              "document.documentElement.style.setProperty('--native-inset-top','%dpx');",
+                              top);
+                          bridge.getWebView().evaluateJavascript(js, null);
+                      }
                       return insets;
                   });
 
