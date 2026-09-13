@@ -144,7 +144,10 @@ jobs:
           cat << 'EOF' > android/app/src/main/java/$PKG_PATH/MainActivity.java
           package com.vinote.app;
           import android.os.Bundle;
+          import android.view.View;
           import android.view.WindowManager;
+          import androidx.core.graphics.Insets;
+          import androidx.core.view.ViewCompat;
           import androidx.core.view.WindowCompat;
           import androidx.core.view.WindowInsetsCompat;
           import androidx.core.view.WindowInsetsControllerCompat;
@@ -173,6 +176,33 @@ jobs:
                   controller.setSystemBarsBehavior(
                       WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                   );
+
+                  // --- Keyboard (IME) inset fix ---
+                  // setDecorFitsSystemWindows(false) above (needed for the
+                  // edge-to-edge immersive look) makes Android stop
+                  // automatically resizing the window when the soft
+                  // keyboard opens — "adjustResize" no longer applies once
+                  // the app manages its own insets. From that point on, the
+                  // WebView is only told the keyboard's real height through
+                  // the web page's own `visualViewport` API, and different
+                  // Android/WebView versions + OEM keyboards report that
+                  // resize with different timing/reliability — sometimes a
+                  // beat late, sometimes not at all while a suggestion
+                  // strip is animating in/out. That's the actual cause of
+                  // the editor "letting go" of the keyboard mid-typing.
+                  // Reading the IME inset straight from WindowInsetsCompat
+                  // (the OS's own authoritative number) and applying it as
+                  // real bottom padding on the WebView's parent removes
+                  // that dependency entirely: the content is physically
+                  // pushed up by exactly the keyboard's height, on every
+                  // device, independent of whether the WebView's own resize
+                  // signal is timely or not.
+                  View rootView = findViewById(android.R.id.content);
+                  ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
+                      int imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+                      v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), imeBottom);
+                      return insets;
+                  });
               }
           }
           EOF
