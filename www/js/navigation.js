@@ -93,8 +93,16 @@
 
                 // Priority 4: Close Editor View
                 if (this.activeView === 'editor') {
-                    const noteId = EditorModule.currentNoteId;
+                    // Save FIRST, then read currentNoteId — for a brand new
+                    // note (opened with noteId === null) saveCurrentNote()
+                    // is what actually assigns its real id. Reading the id
+                    // beforehand would always capture null for a new note,
+                    // even after it got saved with real content, so the
+                    // close animation could never find that note's own card
+                    // to morph onto and would fall back to a generic
+                    // collapse every time.
                     EditorModule.saveCurrentNote();
+                    const noteId = EditorModule.currentNoteId;
                     this.activeView = 'list';
                     UIModule.morphEditorToCard(noteId);
                     return;
