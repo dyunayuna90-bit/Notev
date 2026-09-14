@@ -30,8 +30,8 @@ module.exports = {
                 // editor/canvas (which still relies on vintage-* for its
                 // own chrome — kebab menu, selection bubble) is untouched.
                 // DARK MODE: values point at CSS custom properties (see
-                // :root / .dark in www/css/styles.css) instead of literal
-                // hex colors — see the matching comment in
+                // :root in www/css/styles.css) instead of literal hex
+                // colors — see the matching comment in
                 // www/js/tailwind-config.js (the browser/CDN config) for
                 // the full explanation. Keep the two files' "office" block
                 // in sync by hand whenever one changes.
