@@ -154,6 +154,7 @@ jobs:
 
           public class MainActivity extends BridgeActivity {
               private int lastInsetTop = -1;
+              private int lastInsetBottom = -1;
 
               @Override
               public void onCreate(Bundle savedInstanceState) {
@@ -207,15 +208,45 @@ jobs:
                   // restyle) on every single one of those redundant calls —
                   // that repeated restyling while typing in search is what
                   // was leaving the header's background only half-painted.
+                  // --- Bottom system-gesture inset -> CSS variable ---
+                  // Mirrors the top-inset fix above, for the same
+                  // underlying reason: env(safe-area-inset-bottom) is not
+                  // reliably populated by this WebView either, and here
+                  // that gap is worse than a cosmetic mismatch. Because
+                  // systemBars() are fully hidden (true immersive mode,
+                  // above), navigationBars().bottom reports 0 while
+                  // hidden — there's no "bar" to report an inset for —
+                  // but Android still physically reserves a strip at the
+                  // bottom edge for the gesture-nav back/home swipe
+                  // detection, immersive or not. That strip is what
+                  // systemGestures() reports, and it's the actual reason
+                  // content drawn flush against the true bottom edge (the
+                  // 6rem/pb-56 CSS padding alone assumed a fixed, guessed
+                  // amount) could end up sitting in a dead zone: right at
+                  // the edge, and contested with the OS's own edge-swipe
+                  // gesture detection when the user tries to scroll it
+                  // fully into view. Reading the OS's own authoritative
+                  // number here, same as the cutout above, replaces that
+                  // guess.
                   View rootView = findViewById(android.R.id.content);
                   ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
                       int top = insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top;
+                      int gestureBottom = insets.getInsets(WindowInsetsCompat.Type.systemGestures()).bottom;
+                      StringBuilder js = new StringBuilder();
                       if (top != lastInsetTop) {
                           lastInsetTop = top;
-                          String js = String.format(
+                          js.append(String.format(
                               "document.documentElement.style.setProperty('--native-inset-top','%dpx');",
-                              top);
-                          bridge.getWebView().evaluateJavascript(js, null);
+                              top));
+                      }
+                      if (gestureBottom != lastInsetBottom) {
+                          lastInsetBottom = gestureBottom;
+                          js.append(String.format(
+                              "document.documentElement.style.setProperty('--native-inset-bottom','%dpx');",
+                              gestureBottom));
+                      }
+                      if (js.length() > 0) {
+                          bridge.getWebView().evaluateJavascript(js.toString(), null);
                       }
                       return insets;
                   });
