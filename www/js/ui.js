@@ -593,13 +593,16 @@
                 const editorEl = document.getElementById('editorArea');
                 const DURATION = 380;
 
-                // Load the note now, while the view is still hidden, so the
-                // content is already in place the instant the animation starts.
-                EditorModule.loadNote(noteId);
-
+                // Unhide FIRST, then load — autoSizeTitle() (called from
+                // loadNote) needs the title textarea actually laid out to
+                // read a real scrollHeight; while viewEditor is still
+                // display:none it would measure 0 and size the title box
+                // wrong for the whole rest of this session with the note.
                 viewEditor.style.transformOrigin = 'top left';
                 viewEditor.style.willChange = 'transform';
                 viewEditor.classList.remove('hidden');
+
+                EditorModule.loadNote(noteId);
 
                 const stretchAnim = viewEditor.animate([
                     { transform: `translate(${rect.left}px, ${rect.top}px) scale(${rect.width / vw}, ${rect.height / vh})` },
@@ -658,14 +661,13 @@
                 const editorEl = document.getElementById('editorArea');
                 const DURATION = 380;
 
-                // Load a blank note now, while the view is still hidden, so
-                // it's already in place the instant the animation starts —
-                // same reasoning as morphCardToEditor.
-                EditorModule.loadNote(null);
-
+                // Unhide first, then load — see the same reordering (and
+                // why) in morphCardToEditor above.
                 viewEditor.style.transformOrigin = 'top left';
                 viewEditor.style.willChange = 'transform';
                 viewEditor.classList.remove('hidden');
+
+                EditorModule.loadNote(null);
 
                 const stretchAnim = viewEditor.animate([
                     { transform: `translate(${rect.left}px, ${rect.top}px) scale(${rect.width / vw}, ${rect.height / vh})` },
