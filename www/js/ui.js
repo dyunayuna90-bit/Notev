@@ -24,6 +24,10 @@
             _typingFocusPending: false,
             _typingFocusTimer: null,
 
+            // Debounce handle for the search filter's animated re-render —
+            // see the 'input' listener below for why this exists.
+            _searchRenderTimer: null,
+
             // "Lihat Penuh" (full view) state for the editor — a read-only,
             // chrome-free way to re-read a note: no three-dot menu, no
             // caret/selection. Entered via the dropdown, exited only via
@@ -107,7 +111,20 @@
                 // behaves (results start from the top anyway).
                 const searchInput = document.getElementById('searchInput');
                 searchInput.addEventListener('input', (e) => {
-                    this.renderNotesList(e.target.value.toLowerCase(), { animate: true, resetScroll: true });
+                    const value = e.target.value.toLowerCase();
+                    // Debounced (120ms) so fast typing doesn't retrigger a
+                    // full animated re-render on every single keystroke.
+                    // renderNotesList wipes and rebuilds every card
+                    // (innerHTML = '') each time it runs — without this,
+                    // typing quickly cuts the previous keystroke's FLIP
+                    // animation short mid-flight on every new letter, which
+                    // is what read as choppy/not-smooth. Waiting a short
+                    // beat after the user pauses lets each animation
+                    // actually finish before the next one starts.
+                    clearTimeout(this._searchRenderTimer);
+                    this._searchRenderTimer = setTimeout(() => {
+                        this.renderNotesList(value, { animate: true, resetScroll: true });
+                    }, 120);
                 });
 
                 // Pressing the Android back button while the search bar is
@@ -147,8 +164,24 @@
                     const s = StorageModule.getSettings();
                     s.noteListColumns = s.noteListColumns === 2 ? 1 : 2;
                     StorageModule.saveSettings(s);
+                    // Snapshot BEFORE switching layout classes. applyListLayout()
+                    // changes the container's grid/column classes synchronously,
+                    // which immediately reflows these same card elements into
+                    // their NEW positions — snapshotting after that (like
+                    // renderNotesList would do on its own) captures the new
+                    // layout twice, making dx/dy always ~0 and silently killing
+                    // the morph/slide animation between 1-column and 2-column.
+                    const prevRects = this.snapshotCardRects();
                     this.applyListLayout(s.noteListColumns);
-                    this.renderNotesList(document.getElementById('searchInput').value.toLowerCase(), { animate: true });
+                    this.renderNotesList(document.getElementById('searchInput').value.toLowerCase(), {
+                        animate: true,
+                        prevRects,
+                        // A bit slower/more pronounced than the search-filter
+                        // animation — this is a bigger, more deliberate
+                        // reshuffle of the whole grid, so it reads better as
+                        // a visible "morph" than a quick snap.
+                        duration: 420
+                    });
                 });
             },
 
@@ -198,7 +231,14 @@
             renderNotesList(filter = '', opts = {}) {
                 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 const shouldAnimate = !!opts.animate && !reduceMotion;
-                const prevRects = shouldAnimate ? this.snapshotCardRects() : null;
+                // A caller that already changed the DOM/layout before calling
+                // this (e.g. the column-layout toggle above, or a selection
+                // action that mutates storage first) can pass its own
+                // pre-captured snapshot via opts.prevRects instead of letting
+                // this grab one — grabbing it here would already be too late
+                // in those cases. Falls back to snapshotting right now for
+                // ordinary callers (e.g. search) that haven't touched the DOM yet.
+                const prevRects = shouldAnimate ? (opts.prevRects || this.snapshotCardRects()) : null;
 
                 const pinnedSection = document.getElementById('pinnedSection');
                 const pinnedContainer = document.getElementById('pinnedContainer');
@@ -248,7 +288,7 @@
                     document.getElementById('viewNotesList').scrollTop = 0;
                 }
 
-                if (prevRects) this.animateListChanges(prevRects);
+                if (prevRects) this.animateListChanges(prevRects, { duration: opts.duration });
             },
 
             // Captures the current on-screen position/size of every note
@@ -281,8 +321,19 @@
             //   is placed over their old screen position and faded out,
             //   since the real element is already gone from the DOM by the
             //   time this runs and can't be animated directly.
-            animateListChanges(prevRects) {
+            // opts.duration: base duration (ms) for the move/morph animation.
+            // Entrance and exit (ghost) durations scale off this one number
+            // so every part of one re-render feels like it belongs to the
+            // same motion instead of three animations with unrelated timings.
+            animateListChanges(prevRects, opts = {}) {
                 if (!prevRects) return;
+                const duration = opts.duration || 340;
+                // A standard "ease-out" material-style curve — decelerates
+                // smoothly into the resting position instead of the old
+                // curve's slightly harder snap at the end, which is what
+                // made back-to-back renders (e.g. fast typing) feel a bit
+                // jerky rather than fluid.
+                const easing = 'cubic-bezier(.25,.8,.25,1)';
                 const currentEls = document.querySelectorAll('#pinnedContainer [data-note-id], #notesContainer [data-note-id]');
                 const currentIds = new Set();
 
@@ -303,18 +354,19 @@
                             el.animate([
                                 { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
                                 { transform: 'translate(0px, 0px) scale(1, 1)' }
-                            ], { duration: 320, easing: 'cubic-bezier(.22,.61,.36,1)' });
+                            ], { duration, easing, fill: 'both' });
                         }
                     } else {
                         el.animate([
-                            { opacity: 0, transform: 'scale(0.92) translateY(8px)' },
+                            { opacity: 0, transform: 'scale(0.92) translateY(10px)' },
                             { opacity: 1, transform: 'scale(1) translateY(0)' }
-                        ], { duration: 260, easing: 'cubic-bezier(.22,.61,.36,1)' });
+                        ], { duration: Math.round(duration * 0.8), easing, fill: 'both' });
                     }
                 });
 
                 prevRects.forEach((rect, id) => {
                     if (currentIds.has(id)) return;
+                    const ghostDuration = Math.round(duration * 0.7);
                     const ghost = document.createElement('div');
                     ghost.setAttribute('aria-hidden', 'true');
                     ghost.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; ` +
@@ -323,12 +375,12 @@
                         `border-radius:10px; border:1px solid #ddcbb0;`;
                     document.body.appendChild(ghost);
                     const anim = ghost.animate([
-                        { opacity: 1, transform: 'scale(1)' },
-                        { opacity: 0, transform: 'scale(0.92)' }
-                    ], { duration: 220, easing: 'ease-in' });
+                        { opacity: 1, transform: 'scale(1) translateY(0)' },
+                        { opacity: 0, transform: 'scale(0.94) translateY(6px)' }
+                    ], { duration: ghostDuration, easing: 'ease-out' });
                     const cleanup = () => ghost.remove();
                     if (anim.finished && anim.finished.then) anim.finished.then(cleanup).catch(cleanup);
-                    setTimeout(cleanup, 400);
+                    setTimeout(cleanup, ghostDuration + 150);
                 });
             },
 
@@ -358,10 +410,10 @@
                 // NOTE: these badges/text use the fixed .note-card-* CSS
                 // classes (not text-office-*/bg-office-*/border-office-*)
                 // on purpose — the card always previews the note's own
-                // light "paper" fill regardless of Dark Mode, so its own
-                // contents need fixed colors too, or they'd invert to
-                // light-on-light under .dark. See the comment on
-                // .office-card-note in styles.css for the full reasoning.
+                // light "paper" fill, so its own contents need fixed
+                // colors too, or they'd sit light-on-light against that
+                // paper. See the comment on .office-card-note in
+                // styles.css for the full reasoning.
                 const pinBadge = note.pinned ? `
                     <div class="absolute top-2 right-2 w-5 h-5 note-card-pin-flag text-white rounded-sm flex items-center justify-center">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
@@ -724,7 +776,12 @@
             // it again. In every other case (Cancel button, delete/pin
             // finishing, deselecting the last item) we pop it ourselves so a
             // second back-press later doesn't land on a stale, invisible entry.
-            exitSelectionMode(fromPopState = false) {
+            // renderOpts is forwarded straight to renderNotesList — deleteSelected/
+            // duplicateSelected/togglePinSelected pass { animate: true, prevRects }
+            // here (prevRects captured by them BEFORE they mutated storage) so the
+            // re-render this triggers actually slides/morphs the surviving cards
+            // into their new spots instead of just popping into place.
+            exitSelectionMode(fromPopState = false, renderOpts = {}) {
                 if (!this.selectionMode) return;
                 this.selectionMode = false;
                 this.selectedIds.clear();
@@ -732,7 +789,7 @@
                 document.getElementById('headerSelection').classList.remove('flex');
                 document.getElementById('headerDefault').classList.remove('hidden');
                 document.getElementById('btnNewNote').classList.remove('hidden');
-                this.renderNotesList(document.getElementById('searchInput').value.toLowerCase());
+                this.renderNotesList(document.getElementById('searchInput').value.toLowerCase(), renderOpts);
 
                 if (!fromPopState && history.state && history.state.mode === 'selection') {
                     history.back();
@@ -767,12 +824,18 @@
                 const count = this.selectedIds.size;
                 if (!confirm(`Hapus ${count} catatan terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
 
+                // Snapshot BEFORE removing the notes from storage — the
+                // deleted cards are still on screen in their real positions
+                // right now; exitSelectionMode()'s re-render below is what
+                // actually drops them, so "before" has to be captured here.
+                const prevRects = this.snapshotCardRects();
+
                 let notes = StorageModule.getNotes();
                 notes = notes.filter(n => !this.selectedIds.has(n.id));
                 StorageModule.saveNotes(notes);
 
                 this.showToast(`${count} catatan dihapus`);
-                this.exitSelectionMode();
+                this.exitSelectionMode(false, { animate: true, prevRects });
             },
 
             // Duplicates every selected note as an independent copy (new id,
@@ -785,6 +848,10 @@
             duplicateSelected() {
                 if (this.selectedIds.size === 0) return;
                 const count = this.selectedIds.size;
+
+                // See deleteSelected() above for why this has to happen
+                // before storage is mutated.
+                const prevRects = this.snapshotCardRects();
 
                 let notes = StorageModule.getNotes();
                 const now = new Date().toLocaleDateString('id-ID', {
@@ -818,11 +885,20 @@
 
                 StorageModule.saveNotes(notes);
                 this.showToast(count === 1 ? 'Catatan digandakan' : `${count} catatan digandakan`);
-                this.exitSelectionMode();
+                this.exitSelectionMode(false, { animate: true, prevRects });
             },
 
             togglePinSelected() {
                 if (this.selectedIds.size === 0) return;
+
+                // See deleteSelected() above for why this has to happen
+                // before storage is mutated. Pinning also moves a card
+                // between #notesContainer and #pinnedContainer — since
+                // snapshotCardRects()/animateListChanges track cards by note
+                // id across BOTH containers, this same mechanism naturally
+                // produces a slide from the old spot to the new section
+                // instead of the card just popping into the Pinned list.
+                const prevRects = this.snapshotCardRects();
 
                 let notes = StorageModule.getNotes();
                 const selectedNotes = notes.filter(n => this.selectedIds.has(n.id));
@@ -832,7 +908,7 @@
                 StorageModule.saveNotes(notes);
 
                 this.showToast(allAlreadyPinned ? 'Sematan dilepas' : 'Catatan disematkan');
-                this.exitSelectionMode();
+                this.exitSelectionMode(false, { animate: true, prevRects });
             },
 
             showEditorView(noteId) {
