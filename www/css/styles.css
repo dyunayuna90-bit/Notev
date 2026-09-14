@@ -755,6 +755,7 @@
    "header" feel instead of the title sitting right under the notch/menu). */
 #paperCanvas {
     padding-top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem);
+    padding-bottom: 45vh;
     /* Tells the browser's native scrollIntoView() (used by
        EditorModule.scrollCaretIntoView()) to stop this many pixels short
        of each edge instead of scrolling the caret flush against it — this
@@ -762,7 +763,7 @@
        and below the top notch/menu, without EditorModule needing to
        compute that margin by hand. */
     scroll-padding-top: 24px;
-    scroll-padding-bottom: 40px;
+    scroll-padding-bottom: 56px;
 }
 @media (min-width: 768px) {
     #paperCanvas {
