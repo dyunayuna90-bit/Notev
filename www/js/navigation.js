@@ -101,7 +101,12 @@
                     // close animation could never find that note's own card
                     // to morph onto and would fall back to a generic
                     // collapse every time.
-                    EditorModule.saveCurrentNote();
+                    // flushAutosave (not saveCurrentNote directly) so any
+                    // still-pending debounced write (see
+                    // EditorModule.scheduleAutosave) gets cancelled and
+                    // written for real right now, instead of possibly
+                    // firing a moment later after we've already left.
+                    EditorModule.flushAutosave();
                     const noteId = EditorModule.currentNoteId;
                     this.activeView = 'list';
                     UIModule.morphEditorToCard(noteId);
