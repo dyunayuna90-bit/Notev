@@ -3,7 +3,10 @@
 // completely offline after the first successful load. Bump CACHE_NAME any
 // time you change a cached file's content — that's what forces old clients
 // to fetch the new version instead of serving a stale cached copy forever.
-const CACHE_NAME = 'vinote-cache-v8';
+const CACHE_NAME = 'vinote-cache-v9'; // v8 -> v9: dark-mode-only palette,
+// overlay/dropdown fixes, and animation changes across styles.css/
+// index.html/ui.js/settings.js/storage.js — bump forces every existing
+// installed client to drop its old cached copies and refetch.
 
 // Local app-shell files. These are fetched and cached individually (not via
 // cache.addAll) so that ONE missing/renamed file — e.g. an icon you haven't
