@@ -29,17 +29,23 @@ module.exports = {
                 // style redesign. Kept separate from vintage-* so the
                 // editor/canvas (which still relies on vintage-* for its
                 // own chrome — kebab menu, selection bubble) is untouched.
+                // DARK MODE: values point at CSS custom properties (see
+                // :root / .dark in www/css/styles.css) instead of literal
+                // hex colors — see the matching comment in
+                // www/js/tailwind-config.js (the browser/CDN config) for
+                // the full explanation. Keep the two files' "office" block
+                // in sync by hand whenever one changes.
                 office: {
-                    bg: '#f1e7d8',
-                    surface: '#fffcf6',
-                    header: '#7a4a30',
-                    headerDark: '#5f3a25',
-                    accent: '#bb6a33',
-                    accentDark: '#9c5527',
-                    text: '#3a2c22',
-                    muted: '#8a7864',
-                    border: '#ddcbb0',
-                    divider: '#e9dcc5'
+                    bg: 'var(--office-bg)',
+                    surface: 'var(--office-surface)',
+                    header: 'var(--office-header)',
+                    headerDark: 'var(--office-headerDark)',
+                    accent: 'var(--office-accent)',
+                    accentDark: 'var(--office-accentDark)',
+                    text: 'var(--office-text)',
+                    muted: 'var(--office-muted)',
+                    border: 'var(--office-border)',
+                    divider: 'var(--office-divider)'
                 }
             }
         }
