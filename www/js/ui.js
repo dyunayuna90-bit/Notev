@@ -76,7 +76,7 @@
 
                 // Button Event Listeners
                 document.getElementById('btnNewNote').addEventListener('click', () => {
-                    NavigationModule.openEditor(null);
+                    this.morphFabToEditor();
                 });
 
                 document.getElementById('btnOpenSettings').addEventListener('click', () => {
@@ -180,7 +180,29 @@
                         // animation — this is a bigger, more deliberate
                         // reshuffle of the whole grid, so it reads better as
                         // a visible "morph" than a quick snap.
-                        duration: 420
+                        duration: 460,
+                        // Smoother, slightly slower-building deceleration
+                        // than the default FLIP easing — the search-filter
+                        // re-render is a small, frequent nudge so it wants a
+                        // snappy curve, but a full 1<->2 column reshuffle is
+                        // a rarer, bigger move that reads better with a
+                        // softer landing.
+                        easing: 'cubic-bezier(.32,.72,.35,1)',
+                        // 1<->2 column switches don't just nudge each card a
+                        // little: multi-column ("masonry") flow fills each
+                        // column top-to-bottom BEFORE moving to the next
+                        // one, so cards jump to very different spots (and
+                        // very different widths) than in the 1-column grid,
+                        // not just a short slide. A plain scale-only FLIP
+                        // stretches each card's already-reflowed text across
+                        // that whole jump, which is what read as "aneh" —
+                        // the letters visibly squash/stretch mid-flight
+                        // because the text itself didn't actually resize
+                        // that way, only the box did. Fading each card down
+                        // through the middle of its move (see morphFade in
+                        // animateListChanges) hides that mismatch instead of
+                        // trying to fully mask it with easing alone.
+                        morphFade: true
                     });
                 });
             },
@@ -288,7 +310,7 @@
                     document.getElementById('viewNotesList').scrollTop = 0;
                 }
 
-                if (prevRects) this.animateListChanges(prevRects, { duration: opts.duration });
+                if (prevRects) this.animateListChanges(prevRects, { duration: opts.duration, easing: opts.easing, morphFade: opts.morphFade });
             },
 
             // Captures the current on-screen position/size of every note
@@ -332,8 +354,16 @@
                 // smoothly into the resting position instead of the old
                 // curve's slightly harder snap at the end, which is what
                 // made back-to-back renders (e.g. fast typing) feel a bit
-                // jerky rather than fluid.
-                const easing = 'cubic-bezier(.25,.8,.25,1)';
+                // jerky rather than fluid. Callers with a bigger, rarer
+                // reshuffle (e.g. the column-layout toggle) can pass their
+                // own softer curve instead.
+                const easing = opts.easing || 'cubic-bezier(.25,.8,.25,1)';
+                // See the column-layout toggle handler above for why this
+                // exists: a plain scale-only FLIP looks fine for small
+                // nudges (search filtering) but visibly distorts text when
+                // a card jumps to a very different position AND width at
+                // once, which is what 1<->2 column switches do.
+                const morphFade = !!opts.morphFade;
                 const currentEls = document.querySelectorAll('#pinnedContainer [data-note-id], #notesContainer [data-note-id]');
                 const currentIds = new Set();
 
@@ -351,10 +381,29 @@
                         const moved = Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5;
                         const resized = Math.abs(sx - 1) > 0.02 || Math.abs(sy - 1) > 0.02;
                         if (moved || resized) {
-                            el.animate([
-                                { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
-                                { transform: 'translate(0px, 0px) scale(1, 1)' }
-                            ], { duration, easing, fill: 'both' });
+                            if (morphFade) {
+                                // Dip opacity through the midpoint of the
+                                // move instead of holding it at 1 the whole
+                                // time. The card is most visibly "wrong"
+                                // (its real, already-reflowed text being
+                                // stretched by a box scale that doesn't
+                                // match how that text actually re-wrapped)
+                                // right around the middle of the animation —
+                                // fading it down there hides the mismatch,
+                                // then it fades back up once it's settled
+                                // into its real new size/position, where the
+                                // text is correct again.
+                                el.animate([
+                                    { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: 1 },
+                                    { transform: `translate(${dx * 0.45}px, ${dy * 0.45}px) scale(${(sx + 1) / 2}, ${(sy + 1) / 2})`, opacity: 0.28, offset: 0.5 },
+                                    { transform: 'translate(0px, 0px) scale(1, 1)', opacity: 1 }
+                                ], { duration, easing, fill: 'both' });
+                            } else {
+                                el.animate([
+                                    { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+                                    { transform: 'translate(0px, 0px) scale(1, 1)' }
+                                ], { duration, easing, fill: 'both' });
+                            }
                         }
                     } else {
                         el.animate([
@@ -424,13 +473,26 @@
                         ${isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
                     </div>` : '';
 
+                // Both the title and the body preview clamp to a LINE COUNT
+                // that grows with how much text is actually there, instead
+                // of a single fixed clamp for every card. That's what makes
+                // a one-line "Beli susu" note render as a short, compact
+                // card while a long, multi-paragraph note renders as a
+                // visibly taller one — the home grid ends up with real
+                // variation instead of every card being the same boxy
+                // height regardless of content. Values are capped (title at
+                // 3, body at 6) so even a huge note doesn't turn its card
+                // into something absurd next to the others.
+                const titleClamp = this.pickClampLines(note.title || '', [22, 46], 3);
+                const bodyClamp = this.pickClampLines(plainText, [50, 110, 190, 260, 340], 6);
+
                 card.innerHTML = `
                     ${pinBadge}
                     <div class="flex items-start gap-2">
                         ${selectionDot}
                         <div class="min-w-0 flex-1">
-                            <h2 class="text-sm font-semibold note-card-title-text line-clamp-1 note-card-divider-b pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
-                            <p class="text-xs note-card-muted-text line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
+                            <h2 class="text-sm font-semibold note-card-title-text line-clamp-${titleClamp} note-card-divider-b pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
+                            <p class="text-xs note-card-muted-text line-clamp-${bodyClamp} mb-3">${this.escapeHtml(plainText)}</p>
                         </div>
                     </div>
                     <div class="flex justify-between items-center text-[10px] note-card-muted-text pt-2 note-card-divider-t">
@@ -441,6 +503,22 @@
 
                 this.attachCardGestures(card, note.id);
                 return card;
+            },
+
+            // Picks a Tailwind line-clamp count (1..maxLines) for a piece of
+            // text given a set of ascending character-length thresholds —
+            // e.g. thresholds [50, 110, 190, 300] with maxLines 6 means:
+            // under 50 chars -> clamp 1, under 110 -> clamp 2, ... at or
+            // past the last threshold -> clamp maxLines. Kept as a small
+            // shared helper (rather than inlined twice) since both the
+            // title and the body preview in createNoteCard use the same
+            // "more text -> more visible lines, up to a cap" logic.
+            pickClampLines(text, thresholds, maxLines) {
+                const len = (text || '').trim().length;
+                for (let i = 0; i < thresholds.length; i++) {
+                    if (len <= thresholds[i]) return i + 1;
+                }
+                return maxLines;
             },
 
             // Wires a card for: tap-to-open (default), tap-to-toggle
@@ -546,6 +624,68 @@
                 setTimeout(finish, DURATION + 120); // safety net if 'finished' never resolves
             },
 
+            // Same technique as morphCardToEditor, sourced from the "+" FAB
+            // instead of an existing card — a brand new note has no card
+            // yet to morph from, but it should still open with the same
+            // "stretching into the page" motion instead of just popping
+            // into view like a plain view-switch would. morphEditorToCard
+            // mirrors this on the way back out (it lands back on the FAB
+            // itself when the new note was left empty and never actually
+            // saved — see the fallback there), so opening and closing a
+            // fresh note reads as one continuous morph in and back out of
+            // the same button.
+            morphFabToEditor() {
+                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    NavigationModule.openEditor(null);
+                    return;
+                }
+
+                const fab = document.getElementById('btnNewNote');
+                const rect = fab.getBoundingClientRect();
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+                const viewEditor = document.getElementById('viewEditor');
+                const titleEl = document.getElementById('noteTitleInput');
+                const editorEl = document.getElementById('editorArea');
+                const DURATION = 380;
+
+                // Load a blank note now, while the view is still hidden, so
+                // it's already in place the instant the animation starts —
+                // same reasoning as morphCardToEditor.
+                EditorModule.loadNote(null);
+
+                viewEditor.style.transformOrigin = 'top left';
+                viewEditor.style.willChange = 'transform';
+                viewEditor.classList.remove('hidden');
+
+                const stretchAnim = viewEditor.animate([
+                    { transform: `translate(${rect.left}px, ${rect.top}px) scale(${rect.width / vw}, ${rect.height / vh})` },
+                    { transform: 'translate(0px, 0px) scale(1, 1)' }
+                ], { duration: DURATION, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' });
+
+                const contentAnims = [titleEl, editorEl].map(el => el.animate([
+                    { opacity: 0, offset: 0 },
+                    { opacity: 0, offset: 0.4 },
+                    { opacity: 1, offset: 1 }
+                ], { duration: DURATION, easing: 'ease-out', fill: 'forwards' }));
+
+                let done = false;
+                const finish = () => {
+                    if (done) return;
+                    done = true;
+                    stretchAnim.cancel();
+                    contentAnims.forEach(a => a.cancel());
+                    viewEditor.style.transformOrigin = '';
+                    viewEditor.style.willChange = '';
+                    NavigationModule.activeView = 'editor';
+                    const method = this.collapseTransientFocusState() ? 'replaceState' : 'pushState';
+                    history[method]({ page: 'editor', noteId: null }, '', '#editor');
+                    document.getElementById('viewNotesList').classList.add('hidden');
+                };
+                stretchAnim.finished.then(finish).catch(finish);
+                setTimeout(finish, DURATION + 120);
+            },
+
             // The reverse of morphCardToEditor: shrinks the real #viewEditor
             // (header, paper and content together) back down onto the note's
             // card once it's visible again in the list, again using only
@@ -577,11 +717,24 @@
                 document.getElementById('viewNotesList').classList.remove('hidden');
                 this.renderNotesList();
 
-                const targetCard = document.querySelector(`[data-note-id="${noteId}"]`);
+                const targetCard = noteId ? document.querySelector(`[data-note-id="${noteId}"]`) : null;
                 let targetRect = null;
                 if (targetCard) {
                     targetCard.scrollIntoView({ block: 'nearest' });
                     targetRect = targetCard.getBoundingClientRect();
+                } else {
+                    // No card to land on — most commonly a brand-new note
+                    // opened via morphFabToEditor and then left empty
+                    // (EditorModule.saveCurrentNote never persists an empty
+                    // note, so it never gets a card). Collapse back onto the
+                    // "+" button itself instead of just fading the whole
+                    // view out, so the open-from-FAB and close-back-to-FAB
+                    // motions match — one continuous morph in, same morph
+                    // back out.
+                    const fab = document.getElementById('btnNewNote');
+                    if (fab && !fab.classList.contains('hidden')) {
+                        targetRect = fab.getBoundingClientRect();
+                    }
                 }
 
                 viewEditor.style.transformOrigin = 'top left';
