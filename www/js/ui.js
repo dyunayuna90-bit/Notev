@@ -107,8 +107,7 @@
                 // behaves (results start from the top anyway).
                 const searchInput = document.getElementById('searchInput');
                 searchInput.addEventListener('input', (e) => {
-                    this.renderNotesList(e.target.value.toLowerCase());
-                    document.getElementById('viewNotesList').scrollTop = 0;
+                    this.renderNotesList(e.target.value.toLowerCase(), { animate: true, resetScroll: true });
                 });
 
                 // Pressing the Android back button while the search bar is
@@ -136,16 +135,20 @@
                 document.getElementById('btnCancelSelect').addEventListener('click', () => this.exitSelectionMode());
                 document.getElementById('btnDeleteSelected').addEventListener('click', () => this.deleteSelected());
                 document.getElementById('btnPinSelected').addEventListener('click', () => this.togglePinSelected());
+                document.getElementById('btnDuplicateSelected').addEventListener('click', () => this.duplicateSelected());
 
                 // Home-screen layout toggle (1 column <-> 2 columns).
                 // Purely a display preference for the notes list — has no
-                // effect on the editor/canvas.
+                // effect on the editor/canvas. Animated (animate: true) so
+                // every card visibly slides/stretches from its old spot
+                // into its new column position instead of just popping
+                // into the new layout.
                 document.getElementById('btnToggleLayout').addEventListener('click', () => {
                     const s = StorageModule.getSettings();
                     s.noteListColumns = s.noteListColumns === 2 ? 1 : 2;
                     StorageModule.saveSettings(s);
                     this.applyListLayout(s.noteListColumns);
-                    this.renderNotesList(document.getElementById('searchInput').value.toLowerCase());
+                    this.renderNotesList(document.getElementById('searchInput').value.toLowerCase(), { animate: true });
                 });
             },
 
@@ -181,7 +184,22 @@
                 btn.title = cols === 2 ? 'Tampilan 2 kolom (ketuk untuk 1 kolom)' : 'Tampilan 1 kolom (ketuk untuk 2 kolom)';
             },
 
-            renderNotesList(filter = '') {
+            // filter: search text (lowercased) to match against title/content.
+            // opts.animate: when true, cards that survive the re-render
+            //   glide from their previous position/size to the new one
+            //   (FLIP technique) instead of just popping into place, cards
+            //   that are new fade+scale in, and cards that disappeared get
+            //   a fading "ghost" left briefly in their old spot instead of
+            //   vanishing instantly. Used for search filtering and layout
+            //   switching; left off (default) for routine re-renders
+            //   (delete/pin/import/etc.) that don't need the extra work.
+            // opts.resetScroll: snaps #viewNotesList back to the top after
+            //   rendering — see the search input listener above for why.
+            renderNotesList(filter = '', opts = {}) {
+                const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                const shouldAnimate = !!opts.animate && !reduceMotion;
+                const prevRects = shouldAnimate ? this.snapshotCardRects() : null;
+
                 const pinnedSection = document.getElementById('pinnedSection');
                 const pinnedContainer = document.getElementById('pinnedContainer');
                 const allNotesLabel = document.getElementById('allNotesLabel');
@@ -201,27 +219,117 @@
                     emptyState.classList.remove('hidden');
                     pinnedSection.classList.add('hidden');
                     allNotesLabel.classList.add('hidden');
-                    return;
                 } else {
                     emptyState.classList.add('hidden');
+
+                    const pinnedNotes = filteredNotes.filter(n => n.pinned);
+                    const restNotes = filteredNotes.filter(n => !n.pinned);
+
+                    if (pinnedNotes.length > 0) {
+                        pinnedSection.classList.remove('hidden');
+                        pinnedNotes.forEach(note => pinnedContainer.appendChild(this.createNoteCard(note)));
+                    } else {
+                        pinnedSection.classList.add('hidden');
+                    }
+
+                    // Only bother labeling "Semua Catatan" when it's sitting below
+                    // a Pinned section — otherwise it's the only section on screen
+                    // and a label just adds noise.
+                    allNotesLabel.classList.toggle('hidden', pinnedNotes.length === 0);
+
+                    restNotes.forEach(note => container.appendChild(this.createNoteCard(note)));
                 }
 
-                const pinnedNotes = filteredNotes.filter(n => n.pinned);
-                const restNotes = filteredNotes.filter(n => !n.pinned);
-
-                if (pinnedNotes.length > 0) {
-                    pinnedSection.classList.remove('hidden');
-                    pinnedNotes.forEach(note => pinnedContainer.appendChild(this.createNoteCard(note)));
-                } else {
-                    pinnedSection.classList.add('hidden');
+                // Reset scroll BEFORE measuring the "after" rects for the FLIP
+                // animation below, so the animation's end state matches where
+                // things actually land — resetting scroll AFTER would shift
+                // everything again right as the animation finishes.
+                if (opts.resetScroll) {
+                    document.getElementById('viewNotesList').scrollTop = 0;
                 }
 
-                // Only bother labeling "Semua Catatan" when it's sitting below
-                // a Pinned section — otherwise it's the only section on screen
-                // and a label just adds noise.
-                allNotesLabel.classList.toggle('hidden', pinnedNotes.length === 0);
+                if (prevRects) this.animateListChanges(prevRects);
+            },
 
-                restNotes.forEach(note => container.appendChild(this.createNoteCard(note)));
+            // Captures the current on-screen position/size of every note
+            // card, keyed by note id, so a later re-render can compute how
+            // far each surviving card needs to visually travel (FLIP:
+            // First-Last-Invert-Play). Returns null when the list isn't
+            // actually visible (e.g. mid-editor) — measuring a hidden
+            // (display:none) list would just return zeroed-out rects and
+            // produce a bogus animation.
+            snapshotCardRects() {
+                const listView = document.getElementById('viewNotesList');
+                if (!listView || listView.classList.contains('hidden')) return null;
+                const rects = new Map();
+                document.querySelectorAll('#pinnedContainer [data-note-id], #notesContainer [data-note-id]').forEach(el => {
+                    rects.set(el.dataset.noteId, el.getBoundingClientRect());
+                });
+                return rects;
+            },
+
+            // Plays the actual FLIP animation given a "before" snapshot from
+            // snapshotCardRects(), comparing it against the DOM as it stands
+            // right now (the "after" state, already rendered).
+            // - Cards present in both: animate the delta between old and new
+            //   position/size, from delta -> identity (a genuine move/morph,
+            //   not a fade).
+            // - Cards only present now (new to the list): fade + scale up
+            //   from slightly below their final spot, like settling in.
+            // - Cards only present before (removed by the filter, or
+            //   deleted/pinned-away elsewhere): a short-lived "ghost" element
+            //   is placed over their old screen position and faded out,
+            //   since the real element is already gone from the DOM by the
+            //   time this runs and can't be animated directly.
+            animateListChanges(prevRects) {
+                if (!prevRects) return;
+                const currentEls = document.querySelectorAll('#pinnedContainer [data-note-id], #notesContainer [data-note-id]');
+                const currentIds = new Set();
+
+                currentEls.forEach(el => {
+                    const id = el.dataset.noteId;
+                    currentIds.add(id);
+                    const prev = prevRects.get(id);
+                    const curr = el.getBoundingClientRect();
+
+                    if (prev) {
+                        const dx = prev.left - curr.left;
+                        const dy = prev.top - curr.top;
+                        const sx = curr.width ? prev.width / curr.width : 1;
+                        const sy = curr.height ? prev.height / curr.height : 1;
+                        const moved = Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5;
+                        const resized = Math.abs(sx - 1) > 0.02 || Math.abs(sy - 1) > 0.02;
+                        if (moved || resized) {
+                            el.animate([
+                                { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+                                { transform: 'translate(0px, 0px) scale(1, 1)' }
+                            ], { duration: 320, easing: 'cubic-bezier(.22,.61,.36,1)' });
+                        }
+                    } else {
+                        el.animate([
+                            { opacity: 0, transform: 'scale(0.92) translateY(8px)' },
+                            { opacity: 1, transform: 'scale(1) translateY(0)' }
+                        ], { duration: 260, easing: 'cubic-bezier(.22,.61,.36,1)' });
+                    }
+                });
+
+                prevRects.forEach((rect, id) => {
+                    if (currentIds.has(id)) return;
+                    const ghost = document.createElement('div');
+                    ghost.setAttribute('aria-hidden', 'true');
+                    ghost.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; ` +
+                        `width:${rect.width}px; height:${rect.height}px; margin:0; pointer-events:none; ` +
+                        `z-index:25; background-color:${SettingsModule.getPaperColor()}; ` +
+                        `border-radius:10px; border:1px solid #ddcbb0;`;
+                    document.body.appendChild(ghost);
+                    const anim = ghost.animate([
+                        { opacity: 1, transform: 'scale(1)' },
+                        { opacity: 0, transform: 'scale(0.92)' }
+                    ], { duration: 220, easing: 'ease-in' });
+                    const cleanup = () => ghost.remove();
+                    if (anim.finished && anim.finished.then) anim.finished.then(cleanup).catch(cleanup);
+                    setTimeout(cleanup, 400);
+                });
             },
 
             // Builds a single note card, wired for both the normal "tap to
@@ -238,7 +346,7 @@
                 // animated rectangle. Everything ELSE about the card (border,
                 // font, badges) is the new flat Office-Mobile style — only the
                 // morph-target background color still has to match the editor.
-                card.className = `office-card-note font-ui-modern p-4 flex flex-col justify-between cursor-pointer relative select-none ${isSelected ? 'ring-2 ring-office-accent' : ''}`;
+                card.className = `office-card-note font-ui-modern p-4 flex flex-col justify-between cursor-pointer relative select-none ${isSelected ? 'note-card-ring' : ''}`;
                 card.style.backgroundColor = SettingsModule.getPaperColor();
                 card.dataset.noteId = note.id;
 
@@ -247,13 +355,20 @@
                 tempDiv.innerHTML = note.content || '';
                 const plainText = tempDiv.textContent || tempDiv.innerText || 'Tidak ada teks...';
 
+                // NOTE: these badges/text use the fixed .note-card-* CSS
+                // classes (not text-office-*/bg-office-*/border-office-*)
+                // on purpose — the card always previews the note's own
+                // light "paper" fill regardless of Dark Mode, so its own
+                // contents need fixed colors too, or they'd invert to
+                // light-on-light under .dark. See the comment on
+                // .office-card-note in styles.css for the full reasoning.
                 const pinBadge = note.pinned ? `
-                    <div class="absolute top-2 right-2 w-5 h-5 bg-office-accent text-white rounded-sm flex items-center justify-center">
+                    <div class="absolute top-2 right-2 w-5 h-5 note-card-pin-flag text-white rounded-sm flex items-center justify-center">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3-1-6z"/></svg>
                     </div>` : '';
 
                 const selectionDot = this.selectionMode ? `
-                    <div class="w-5 h-5 mt-0.5 rounded-sm border border-office-border flex items-center justify-center shrink-0 ${isSelected ? 'bg-office-accent border-office-accent' : 'bg-office-surface'}">
+                    <div class="w-5 h-5 mt-0.5 rounded-sm note-card-dot flex items-center justify-center shrink-0 ${isSelected ? 'note-card-dot-checked' : ''}">
                         ${isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
                     </div>` : '';
 
@@ -262,13 +377,13 @@
                     <div class="flex items-start gap-2">
                         ${selectionDot}
                         <div class="min-w-0 flex-1">
-                            <h2 class="text-sm font-semibold text-office-text line-clamp-1 border-b border-office-divider pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
-                            <p class="text-xs text-office-muted line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
+                            <h2 class="text-sm font-semibold note-card-title-text line-clamp-1 note-card-divider-b pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
+                            <p class="text-xs note-card-muted-text line-clamp-3 mb-3">${this.escapeHtml(plainText)}</p>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center text-[10px] text-office-muted pt-2 border-t border-office-divider">
+                    <div class="flex justify-between items-center text-[10px] note-card-muted-text pt-2 note-card-divider-t">
                         <span>${note.updatedAt || ''}</span>
-                        <span class="font-semibold uppercase tracking-wider text-office-accent">${this.selectionMode ? '' : 'Buka &rarr;'}</span>
+                        <span class="font-semibold uppercase tracking-wider note-card-accent-text">${this.selectionMode ? '' : 'Buka &rarr;'}</span>
                     </div>
                 `;
 
@@ -643,6 +758,7 @@
                 const count = this.selectedIds.size;
                 document.getElementById('selectionCount').textContent = `${count} dipilih`;
                 document.getElementById('btnPinSelected').classList.toggle('opacity-40', count === 0);
+                document.getElementById('btnDuplicateSelected').classList.toggle('opacity-40', count === 0);
                 document.getElementById('btnDeleteSelected').classList.toggle('opacity-40', count === 0);
             },
 
@@ -656,6 +772,52 @@
                 StorageModule.saveNotes(notes);
 
                 this.showToast(`${count} catatan dihapus`);
+                this.exitSelectionMode();
+            },
+
+            // Duplicates every selected note as an independent copy (new id,
+            // "(Salinan)" suffix on the title, freshly stamped created/updated
+            // dates, never carries the pin over so the Pinned section doesn't
+            // silently fill up with duplicates). Each copy is inserted right
+            // after its own original in storage order, instead of all of them
+            // landing at the very top, so a duplicated note stays next to the
+            // note it came from.
+            duplicateSelected() {
+                if (this.selectedIds.size === 0) return;
+                const count = this.selectedIds.size;
+
+                let notes = StorageModule.getNotes();
+                const now = new Date().toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                // Snapshot the originals BEFORE mutating notes — inserting
+                // duplicates shifts array indices, so looking up each
+                // original's position has to happen fresh per iteration
+                // against the array as it grows (see splice below), not off
+                // a stale index computed up front.
+                const originalIds = Array.from(this.selectedIds);
+                originalIds.forEach((id, i) => {
+                    const originalIndex = notes.findIndex(n => n.id === id);
+                    if (originalIndex === -1) return;
+                    const original = notes[originalIndex];
+                    const duplicate = {
+                        ...original,
+                        // Timestamp alone can collide when several notes are
+                        // duplicated in the same synchronous loop (Date.now()
+                        // won't have ticked between iterations) — the index
+                        // suffix guarantees uniqueness even then.
+                        id: `note_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`,
+                        title: `${original.title} (Salinan)`,
+                        pinned: false,
+                        createdAt: now,
+                        updatedAt: now
+                    };
+                    notes.splice(originalIndex + 1, 0, duplicate);
+                });
+
+                StorageModule.saveNotes(notes);
+                this.showToast(count === 1 ? 'Catatan digandakan' : `${count} catatan digandakan`);
                 this.exitSelectionMode();
             },
 
