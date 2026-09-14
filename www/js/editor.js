@@ -12,7 +12,6 @@
             init() {
                 this.editorArea = document.getElementById('editorArea');
                 this.titleInput = document.getElementById('noteTitleInput');
-                this.reserveKeyboardSpace();
 
                 // Input Events for Auto-save & Undo Snapshots
                 this.editorArea.addEventListener('input', () => {
@@ -86,7 +85,6 @@
                 // duplication removes the race entirely.)
                 if (window.visualViewport) {
                     window.visualViewport.addEventListener('resize', () => {
-                        this.reserveKeyboardSpace();
                         requestAnimationFrame(() => this.scrollCaretIntoView());
                     });
                 }
@@ -112,7 +110,6 @@
                 this.editorArea.addEventListener('focus', () => {
                     // Give the keyboard-open animation time to finish before measuring.
                     setTimeout(() => {
-                        this.reserveKeyboardSpace();
                         if (scrollTopBeforeFocus !== null) {
                             paperCanvas.scrollTop = scrollTopBeforeFocus;
                             scrollTopBeforeFocus = null;
@@ -197,47 +194,28 @@
                 this.updateFontIndicator();
             },
 
-            // Reserves exactly enough bottom space on #editorArea for
-            // #paperCanvas to scroll ANY caret position above the
-            // keyboard — no matter how short the note is.
-            //
-            // The markup previously had a fixed pb-56 (224px) baked in as
-            // a rough guess at "about one keyboard's height". That guess
-            // is the ONLY source of scrollable overflow on a short/new
-            // note — a long note's own text adds plenty more room on top
-            // of it, which is exactly why this bug only ever showed up on
-            // the first few lines/paragraphs of a note and always
-            // resolved itself once there was enough real text. If the
-            // fixed guess is even slightly shorter than the keyboard
-            // actually is on a given device, #paperCanvas simply runs out
-            // of room to scroll — it hits its real max scrollTop with the
-            // caret still short of clearing the keyboard, and no amount
-            // of JS telling it to "scroll more" can invent overflow that
-            // isn't there.
-            //
-            // Fix: measure the keyboard's real height (the gap between
-            // the tallest visualViewport height we've seen — i.e.
-            // keyboard-closed — and the current, keyboard-open one) and
-            // set padding-bottom to match it directly, plus a little
-            // breathing room. This guarantees enough scroll room on every
-            // note regardless of length, and the added breathing-room
-            // buffer is also what keeps the last line from sitting
-            // completely flush against the bottom edge.
-            maxViewportHeight: 0,
-            reserveKeyboardSpace() {
-                const vv = window.visualViewport;
-                if (!vv) return;
-                this.maxViewportHeight = Math.max(this.maxViewportHeight, vv.height);
-                const keyboardHeight = Math.max(0, this.maxViewportHeight - vv.height);
-                const breathingRoom = 56; // extra px so the last line isn't flush against the edge
-                const minReserve = 160; // keep some reserve even before we've measured a keyboard
-                this.editorArea.style.paddingBottom = Math.max(keyboardHeight + breathingRoom, minReserve) + 'px';
-            },
-
             // Keeps the text caret visible above the keyboard by scrolling
-            // #paperCanvas manually. Needed because contenteditable inside a
-            // nested scroll container doesn't reliably auto-scroll on Android
+            // #paperCanvas. Needed because contenteditable inside a nested
+            // scroll container doesn't reliably auto-scroll on Android
             // WebView the way a plain <textarea> or the page body would.
+            //
+            // Earlier versions of this function hand-measured the caret's
+            // bounding rect and manually computed how far to scroll, based
+            // on assumptions about the visual viewport height and how much
+            // overflow room #paperCanvas had available. Those assumptions
+            // turned out to be wrong specifically for short/early-paragraph
+            // notes — the caret simply never got fully cleared of the
+            // keyboard there, no matter how the margins/padding were
+            // tuned. Rather than keep guessing at that math, this now
+            // inserts a temporary invisible marker exactly at the caret and
+            // asks the browser's OWN native scrollIntoView() to bring it
+            // into view — it uses the real, final computed layout of every
+            // nested scroll container involved, so it can't run out of
+            // room the way our own manual math could. The comfortable
+            // margin at each edge (so the caret line isn't flush against
+            // the keyboard or the top) comes from scroll-padding on
+            // #paperCanvas (see styles.css) — that's what native
+            // scrollIntoView respects automatically.
             scrollCaretIntoView() {
                 const sel = window.getSelection();
                 if (!sel || sel.rangeCount === 0) return;
@@ -245,65 +223,40 @@
 
                 const range = sel.getRangeAt(0).cloneRange();
                 range.collapse(true);
-                let rect = range.getBoundingClientRect();
 
-                // A collapsed range at an empty line (e.g. right after pressing
-                // Enter, or the very first tap into a blank note) reports an
-                // all-zero rect. This used to fall back to the FULL bounding
-                // box of the caret's containing element — but on an empty note
-                // that element is #editorArea itself, whose box includes its
-                // min-height (400px) and ~14rem of bottom padding reserved for
-                // the keyboard. That made `rect.bottom` land far below the
-                // actual caret line, so the code below thought the caret was
-                // off-screen and scrolled the paper down to "fix" it — which is
-                // exactly what was yanking the title out of view on a simple
-                // tap. Only the element's TOP is trustworthy here; synthesize a
-                // single-line-height rect from it instead of trusting its full,
-                // oversized box.
-                if (rect.width === 0 && rect.height === 0 && rect.top === 0 && rect.bottom === 0) {
-                    const node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
-                    if (node && node.getBoundingClientRect) {
-                        const nodeRect = node.getBoundingClientRect();
-                        const lineHeight = parseFloat(getComputedStyle(node).lineHeight) || 28;
-                        rect = {
-                            top: nodeRect.top,
-                            bottom: nodeRect.top + lineHeight,
-                            left: nodeRect.left,
-                            right: nodeRect.right
-                        };
-                    }
+                const marker = document.createElement('span');
+                marker.style.cssText = 'display:inline-block;width:0;height:1em;';
+                marker.textContent = '\u200b'; // zero-width space — keeps the span a real, measurable inline box
+                try {
+                    range.insertNode(marker);
+                } catch (e) {
+                    return; // range wasn't in a state that allows inserting (rare) — skip this tick
                 }
-                if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
-
-                // getBoundingClientRect() on a collapsed range often only
-                // wraps the caret glyph's own ink (ascent/descent), not the
-                // full CSS line-height box that line actually occupies on
-                // the page — with this app's fairly tall default line
-                // height (1.8x), that gap is noticeable. Normalize rect
-                // into a plain writable object (a real DOMRect's
-                // top/bottom are read-only getters) and pad its bottom out
-                // to the full line-height, so the WHOLE line — not just
-                // the letters' ink — is what gets kept clear of the
-                // keyboard. Without this, the last line can end up sitting
-                // flush against the edge with none of the breathing room a
-                // normal note app leaves.
-                rect = { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
-                const caretEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
-                if (caretEl && caretEl.nodeType === 1) {
-                    const lineHeight = parseFloat(getComputedStyle(caretEl).lineHeight) || (rect.bottom - rect.top);
-                    rect.bottom = Math.max(rect.bottom, rect.top + lineHeight);
-                }
-
-                const vv = window.visualViewport;
-                const visibleTop = vv ? vv.offsetTop : 0;
-                const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
-                const margin = 32; // buffer so the caret line has real breathing room, not glued to the edge
 
                 const paperCanvas = document.getElementById('paperCanvas');
-                if (rect.bottom > visibleBottom - margin) {
-                    this.forceScrollTop(paperCanvas, paperCanvas.scrollTop + (rect.bottom - (visibleBottom - margin)));
-                } else if (rect.top < visibleTop + margin) {
-                    this.forceScrollTop(paperCanvas, paperCanvas.scrollTop - (visibleTop + margin - rect.top));
+                const beforeScroll = paperCanvas.scrollTop;
+                marker.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                const afterScroll = paperCanvas.scrollTop;
+
+                // Put the caret back exactly where it was (right after the
+                // marker), then remove the marker — it must never end up
+                // saved as part of the note's actual content.
+                const restoreRange = document.createRange();
+                restoreRange.setStartAfter(marker);
+                restoreRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(restoreRange);
+                marker.remove();
+
+                // If scrollIntoView actually had to move the paper,
+                // reassert that same target for a few more frames — guards
+                // against the correction landing right as the user's own
+                // scroll gesture is still decelerating (finger already
+                // lifted, WebView still coasting on inertia), which can
+                // otherwise silently overwrite a single synchronous scroll
+                // write a moment later.
+                if (afterScroll !== beforeScroll) {
+                    this.forceScrollTop(paperCanvas, afterScroll);
                 }
             },
 
