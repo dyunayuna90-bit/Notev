@@ -128,11 +128,6 @@
                     this.saveAndApply();
                 });
 
-                document.getElementById('toggleDarkMode').addEventListener('change', (e) => {
-                    this.currentSettings.darkMode = e.target.checked;
-                    this.saveAndApply();
-                });
-
                 // Backup buttons
                 document.getElementById('btnExportData').addEventListener('click', () => {
                     StorageModule.exportBackup();
@@ -205,24 +200,6 @@
                 const s = this.currentSettings;
                 const paperCanvas = document.getElementById('paperCanvas');
                 const editorArea = document.getElementById('editorArea');
-
-                // Dark Mode sync — toggling the `dark` class on <html> is
-                // ALL that's needed to re-theme every bg-office-*/
-                // text-office-*/border-office-* class already used across
-                // the app, since the Tailwind config now points those
-                // colors at CSS vars that flip under .dark (see
-                // css/styles.css). Also nudges the browser/status-bar
-                // theme-color to match so it doesn't stay a light-mode
-                // brown while the app itself has gone dark. The inline
-                // <script> in <head> already applied this once on first
-                // paint (to avoid a light-mode flash); this just keeps it
-                // in sync any time the setting changes afterward.
-                document.getElementById('toggleDarkMode').checked = s.darkMode;
-                document.documentElement.classList.toggle('dark', s.darkMode);
-                const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-                if (themeColorMeta) {
-                    themeColorMeta.setAttribute('content', s.darkMode ? '#1c1714' : '#8c3a2b');
-                }
 
                 // Default font sync — this is the actual base style for any
                 // text in the note that isn't wrapped in its own per-selection
