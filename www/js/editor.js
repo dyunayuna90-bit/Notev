@@ -6,6 +6,8 @@
             undoStack: new UndoRedoStack(),
             activeFont: 'font-typewriter', // re-synced from settings in SettingsModule.init() → EditorModule.loadNote()
             pendingFont: null, // font style to apply to the NEXT characters typed
+            autosaveTimer: null, // pending debounced disk write, see scheduleAutosave()
+            AUTOSAVE_DEBOUNCE_MS: 500,
 
             init() {
                 this.editorArea = document.getElementById('editorArea');
@@ -233,10 +235,29 @@
                 }
                 if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
 
+                // getBoundingClientRect() on a collapsed range often only
+                // wraps the caret glyph's own ink (ascent/descent), not the
+                // full CSS line-height box that line actually occupies on
+                // the page — with this app's fairly tall default line
+                // height (1.8x), that gap is noticeable. Normalize rect
+                // into a plain writable object (a real DOMRect's
+                // top/bottom are read-only getters) and pad its bottom out
+                // to the full line-height, so the WHOLE line — not just
+                // the letters' ink — is what gets kept clear of the
+                // keyboard. Without this, the last line can end up sitting
+                // flush against the edge with none of the breathing room a
+                // normal note app leaves.
+                rect = { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
+                const caretEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                if (caretEl && caretEl.nodeType === 1) {
+                    const lineHeight = parseFloat(getComputedStyle(caretEl).lineHeight) || (rect.bottom - rect.top);
+                    rect.bottom = Math.max(rect.bottom, rect.top + lineHeight);
+                }
+
                 const vv = window.visualViewport;
                 const visibleTop = vv ? vv.offsetTop : 0;
                 const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
-                const margin = 24; // small buffer so the caret line isn't glued to the edge
+                const margin = 32; // buffer so the caret line has real breathing room, not glued to the edge
 
                 const paperCanvas = document.getElementById('paperCanvas');
                 if (rect.bottom > visibleBottom - margin) {
@@ -290,6 +311,14 @@
             },
 
             loadNote(noteId) {
+                // Flush whatever note was open before this one. Since
+                // autosave is now debounced (see scheduleAutosave), the
+                // last keystroke typed just before switching notes could
+                // still be sitting in that timer — flushing here writes it
+                // for real before we swap the DOM/currentNoteId out from
+                // under it.
+                this.flushAutosave();
+
                 this.currentNoteId = noteId;
                 this.undoStack.clear();
                 // Fresh typing in this note starts from the persisted default
@@ -327,6 +356,43 @@
             onEditorInput() {
                 this.sanitizeInlineFontSizes();
                 this.undoStack.pushState(this.editorArea.innerHTML);
+                this.scheduleAutosave();
+            },
+
+            // Writing to disk is the expensive part of every keystroke —
+            // saveCurrentNote() re-reads and re-writes the ENTIRE notes
+            // list (JSON.parse/JSON.stringify + localStorage.setItem of
+            // ALL notes, not just this one), and that cost grows with how
+            // many notes exist and how long this one is. Running it
+            // synchronously on every single character (as before) could
+            // momentarily block the main thread — and on this Android
+            // WebView, a long enough block during active typing is what
+            // makes the soft keyboard lose its sync with the caret (it
+            // then needs a fresh tap/Enter/scroll to "wake back up",
+            // exactly the reported bug). Debouncing means the actual disk
+            // write only happens once typing pauses for a moment, instead
+            // of on every keystroke; scrollCaretIntoView() (called
+            // separately, right after this, in the 'input' listener) stays
+            // immediate so the screen still follows the cursor instantly.
+            scheduleAutosave() {
+                if (this.autosaveTimer) clearTimeout(this.autosaveTimer);
+                this.autosaveTimer = setTimeout(() => {
+                    this.autosaveTimer = null;
+                    this.saveCurrentNote();
+                }, this.AUTOSAVE_DEBOUNCE_MS);
+            },
+
+            // Cancels any pending debounced write and saves immediately.
+            // Call this anywhere the current note is about to stop being
+            // "the one on screen" (switching to another note, closing the
+            // editor, the app going to background) — otherwise the very
+            // last keystroke before that moment could still be waiting on
+            // the debounce timer and never get written.
+            flushAutosave() {
+                if (this.autosaveTimer) {
+                    clearTimeout(this.autosaveTimer);
+                    this.autosaveTimer = null;
+                }
                 this.saveCurrentNote();
             },
 
@@ -563,6 +629,10 @@
 
             deleteCurrentNote() {
                 if (!this.currentNoteId) return;
+                if (this.autosaveTimer) {
+                    clearTimeout(this.autosaveTimer);
+                    this.autosaveTimer = null;
+                }
                 let notes = StorageModule.getNotes();
                 notes = notes.filter(n => n.id !== this.currentNoteId);
                 StorageModule.saveNotes(notes);
