@@ -731,7 +731,7 @@
        exactly the "header terpotong" bug). The safe-area top inset is now
        added to each screen's own header below instead, so the header's own
        background is what extends into that strip. */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--native-inset-bottom, env(safe-area-inset-bottom, 0px));
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
     box-sizing: border-box;
@@ -770,18 +770,28 @@
        always has *some* room to leave that margin, even when the caret
        is on the very last line of a note whose content ends exactly at
        the container's bottom edge.
-       The added env(safe-area-inset-bottom, 0px) term is a SEPARATE
-       concern: #viewEditor (this element's parent) is positioned
-       `absolute inset-0`, which sizes it against #appRoot's PADDING
-       EDGE — meaning it sits flush with #appRoot's own border, entirely
-       bypassing the `padding-bottom: env(safe-area-inset-bottom, 0px)`
-       rule on #appRoot further down this file. Without it repeated
-       here, the last line of a note can end up sitting flush against
-       the bare bottom edge of the physical screen (under/behind the
-       gesture-nav bar or home indicator) once the keyboard closes, with
-       no further room to scroll it clear — exactly the "kepepet layar
-       bawah, gak bisa discroll lagi" bug. */
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+       The added inset term is a SEPARATE concern: #viewEditor (this
+       element's parent) is positioned `absolute inset-0`, which sizes
+       it against #appRoot's PADDING EDGE — meaning it sits flush with
+       #appRoot's own border, entirely bypassing the padding-bottom rule
+       on #appRoot further down this file. Without it repeated here,
+       the last line of a note can end up sitting flush against the
+       bare bottom edge of the physical screen once the keyboard
+       closes, with no further room to scroll it clear — exactly the
+       "kepepet layar bawah, gak bisa discroll lagi" bug.
+       This used to read plain env(safe-area-inset-bottom, 0px) here,
+       same as #appRoot above — but on this WebView, with the nav bar
+       fully hidden (true immersive mode, see MainActivity.java),
+       env(safe-area-inset-bottom) reports 0: there's no "bar" left for
+       the browser to report an inset for. Android still physically
+       reserves a gesture-detection strip at the true bottom edge
+       regardless, which is what was making the last line land in that
+       contested strip no matter how big the fixed 6rem below was. Like
+       --native-inset-top, --native-inset-bottom is pushed in by
+       MainActivity.java from the OS's own systemGestures() inset — the
+       actual authoritative number — with the same env() fallback for
+       when this runs as a plain PWA/browser tab instead of the APK. */
+    padding-bottom: calc(6rem + var(--native-inset-bottom, env(safe-area-inset-bottom, 0px)));
     /* Tells the browser's native scrollIntoView() (used by
        EditorModule.scrollCaretIntoView()) to stop this many pixels short
        of each edge instead of scrolling the caret flush against it — this
