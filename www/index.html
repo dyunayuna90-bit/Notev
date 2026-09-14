@@ -174,8 +174,14 @@
 
             <!-- Full Screen Paper Canvas Area -->
             <div id="paperCanvas" class="momentum-scroll flex-1 w-full h-full overflow-y-auto theme-vintage p-4 md:p-10 flex flex-col transition-all">
-                <!-- Title Input -->
-                <input type="text" id="noteTitleInput" placeholder="Judul Catatan..." class="w-full max-w-4xl mx-auto bg-transparent font-title text-2xl md:text-3xl font-bold border-b-2 border-vintage-border pb-2 mb-4 focus:outline-none text-vintage-dark placeholder-vintage-muted/60">
+                <!-- Title Input — a textarea (not a single-line <input>) so a
+                     long title wraps across a few lines instead of just
+                     scrolling off the edge of the screen; height is grown
+                     to fit via EditorModule.autoSizeTitle(). Enter is
+                     intercepted in JS to move focus into the body instead
+                     of inserting a literal line break, so this always stays
+                     visually and logically a single "title" field. -->
+                <textarea id="noteTitleInput" placeholder="Judul Catatan..." rows="1" class="w-full max-w-4xl mx-auto bg-transparent font-title text-2xl md:text-3xl font-bold border-b-2 border-vintage-border pb-2 mb-4 focus:outline-none text-vintage-dark placeholder-vintage-muted/60 resize-none overflow-hidden break-words leading-snug"></textarea>
 
                 <!-- Rich Text Wide Editable Canvas -->
                 <div id="editorArea" class="editable-area flex-1 w-full max-w-4xl mx-auto min-h-[400px] pb-56 focus:outline-none" contenteditable="true" spellcheck="false" placeholder="Tuliskan catatan vintage Anda di sini..."></div>
