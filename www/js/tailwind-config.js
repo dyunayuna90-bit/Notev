@@ -30,14 +30,13 @@ tailwind.config = {
                 // by hand whenever one changes.
                 //
                 // DARK MODE: every value now points at a CSS custom
-                // property (defined under :root / .dark in css/styles.css)
+                // property (defined under :root in css/styles.css)
                 // instead of a literal hex color. Tailwind just emits e.g.
                 // `background-color: var(--office-bg)` for `bg-office-bg`
-                // — the actual color then comes from whichever :root/.dark
-                // block is active, so toggling the `dark` class on <html>
-                // (see SettingsModule) re-themes every bg-office-*/
-                // text-office-*/border-office-* class already used across
-                // the app with ZERO markup changes needed.
+                // — the actual color then comes from :root, which is now
+                // the only palette this app ships (Mode Gelap toggle
+                // removed) — so this class name is kept only so existing
+                // markup across the app doesn't need touching.
                 office: {
                     bg: 'var(--office-bg)',
                     surface: 'var(--office-surface)',
