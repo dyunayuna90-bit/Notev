@@ -79,6 +79,55 @@
            plain white/default canvas. */
         html, body { background-color: var(--office-bg) !important; }
 
+        /* ==========================================================
+           BULLETPROOF vintage-* UTILITY FALLBACKS
+           Same rationale as the office-* block above, for the editor's
+           own vintage-* palette (js/tailwind-config.js extends
+           `colors.vintage` — kept in sync by hand with tailwind_config.js,
+           the separate Node/CLI config used for the offline APK build).
+           The comment above claimed the editor's vintage/paper look
+           "already doesn't depend on" Tailwind actually running — true
+           for plain elements like #editorArea, which inherit `color`
+           from .theme-vintage's own hand-authored rule further down this
+           file. It is NOT true for form controls: a textarea/input does
+           not inherit `color` from an ancestor the way a div does, so
+           #noteTitleInput has no color source of its own other than its
+           text-vintage-dark class. If Tailwind's runtime generation is
+           blocked, delayed, or misbehaves — the exact failure mode
+           already described above for office-* — that class silently
+           produces no CSS, and the title textarea falls back to the
+           browser's own default text color while everything around it
+           stays invisible-on-paper. These rules give every vintage-*
+           class actually used in the editor (kebab menu, selection
+           bubble, title) a real value that exists independently of
+           Tailwind ever running. Values match js/tailwind-config.js's
+           `colors.vintage` exactly, so this is a no-op whenever Tailwind
+           DOES generate the class correctly. */
+        .bg-vintage-card { background-color: #e8dbb8 !important; }
+        .bg-vintage-dark { background-color: #2c221e !important; }
+        .bg-vintage-paper { background-color: #fcf8ec !important; }
+        .hover\:bg-vintage-muted:hover { background-color: #6b5e52 !important; }
+        .hover\:bg-vintage-paper:hover { background-color: #fcf8ec !important; }
+
+        .border-vintage-border { border-color: #b8a686 !important; }
+        .border-vintage-dark { border-color: #2c221e !important; }
+        .border-vintage-paper { border-color: #fcf8ec !important; }
+
+        .text-vintage-accent { color: #8c3a2b !important; }
+        .text-vintage-dark { color: #2c221e !important; }
+        .text-vintage-dark\/70 { color: rgba(44, 34, 30, 0.7) !important; }
+        .hover\:text-vintage-dark:hover { color: #2c221e !important; }
+        .text-vintage-paper { color: #fcf8ec !important; }
+
+        .placeholder-vintage-muted\/60::placeholder { color: rgba(107, 94, 82, 0.6) !important; }
+
+        /* Belt-and-suspenders for the title specifically, since this is
+           the one place the failure is invisible rather than just
+           unstyled: even if a future markup edit drops text-vintage-dark
+           from #noteTitleInput entirely, its text must still read
+           against the paper. */
+        #noteTitleInput { color: #2c221e; }
+
         /* Custom Fonts mapping */
         /* Font spans size themselves off --note-font-size (kept in sync with
            the "Ukuran Huruf Default" setting on #editorArea) via calc(),
