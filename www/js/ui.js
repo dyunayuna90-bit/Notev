@@ -491,8 +491,17 @@
                 // which is what let these previews render fully unclamped
                 // instead of actually being limited. The inline style has
                 // no such dependency.
+                // Body preview now has more graduated steps (was capped at
+                // 4 with only 3 thresholds, so anything past ~200 chars —
+                // most real notes — collapsed to the exact same clamp and
+                // the exact same card height, no matter how much longer
+                // they actually were). More thresholds + a slightly higher
+                // cap gives genuinely longer notes a genuinely taller card,
+                // while the cap (6) still keeps it well short of the
+                // effectively-unclamped wall of text from before that made
+                // it look broken.
                 const titleClamp = this.pickClampLines(note.title || '', [26], 2);
-                const bodyClamp = this.pickClampLines(plainText, [55, 120, 200], 4);
+                const bodyClamp = this.pickClampLines(plainText, [40, 90, 150, 220, 300], 6);
                 const clampStyle = (n) => `style="display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:${n}; overflow:hidden;"`;
 
                 card.innerHTML = `
