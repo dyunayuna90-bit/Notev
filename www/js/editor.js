@@ -12,6 +12,7 @@
             init() {
                 this.editorArea = document.getElementById('editorArea');
                 this.titleInput = document.getElementById('noteTitleInput');
+                this.reserveKeyboardSpace();
 
                 // Input Events for Auto-save & Undo Snapshots
                 this.editorArea.addEventListener('input', () => {
@@ -85,6 +86,7 @@
                 // duplication removes the race entirely.)
                 if (window.visualViewport) {
                     window.visualViewport.addEventListener('resize', () => {
+                        this.reserveKeyboardSpace();
                         requestAnimationFrame(() => this.scrollCaretIntoView());
                     });
                 }
@@ -110,6 +112,7 @@
                 this.editorArea.addEventListener('focus', () => {
                     // Give the keyboard-open animation time to finish before measuring.
                     setTimeout(() => {
+                        this.reserveKeyboardSpace();
                         if (scrollTopBeforeFocus !== null) {
                             paperCanvas.scrollTop = scrollTopBeforeFocus;
                             scrollTopBeforeFocus = null;
@@ -192,6 +195,43 @@
                 });
 
                 this.updateFontIndicator();
+            },
+
+            // Reserves exactly enough bottom space on #editorArea for
+            // #paperCanvas to scroll ANY caret position above the
+            // keyboard — no matter how short the note is.
+            //
+            // The markup previously had a fixed pb-56 (224px) baked in as
+            // a rough guess at "about one keyboard's height". That guess
+            // is the ONLY source of scrollable overflow on a short/new
+            // note — a long note's own text adds plenty more room on top
+            // of it, which is exactly why this bug only ever showed up on
+            // the first few lines/paragraphs of a note and always
+            // resolved itself once there was enough real text. If the
+            // fixed guess is even slightly shorter than the keyboard
+            // actually is on a given device, #paperCanvas simply runs out
+            // of room to scroll — it hits its real max scrollTop with the
+            // caret still short of clearing the keyboard, and no amount
+            // of JS telling it to "scroll more" can invent overflow that
+            // isn't there.
+            //
+            // Fix: measure the keyboard's real height (the gap between
+            // the tallest visualViewport height we've seen — i.e.
+            // keyboard-closed — and the current, keyboard-open one) and
+            // set padding-bottom to match it directly, plus a little
+            // breathing room. This guarantees enough scroll room on every
+            // note regardless of length, and the added breathing-room
+            // buffer is also what keeps the last line from sitting
+            // completely flush against the bottom edge.
+            maxViewportHeight: 0,
+            reserveKeyboardSpace() {
+                const vv = window.visualViewport;
+                if (!vv) return;
+                this.maxViewportHeight = Math.max(this.maxViewportHeight, vv.height);
+                const keyboardHeight = Math.max(0, this.maxViewportHeight - vv.height);
+                const breathingRoom = 56; // extra px so the last line isn't flush against the edge
+                const minReserve = 160; // keep some reserve even before we've measured a keyboard
+                this.editorArea.style.paddingBottom = Math.max(keyboardHeight + breathingRoom, minReserve) + 'px';
             },
 
             // Keeps the text caret visible above the keyboard by scrolling
