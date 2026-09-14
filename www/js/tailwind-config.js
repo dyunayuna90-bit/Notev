@@ -28,17 +28,27 @@ tailwind.config = {
                 // PWA/in-browser instead of the packaged APK. Keep this
                 // block in sync with the "office" block in tailwind_config
                 // by hand whenever one changes.
+                //
+                // DARK MODE: every value now points at a CSS custom
+                // property (defined under :root / .dark in css/styles.css)
+                // instead of a literal hex color. Tailwind just emits e.g.
+                // `background-color: var(--office-bg)` for `bg-office-bg`
+                // — the actual color then comes from whichever :root/.dark
+                // block is active, so toggling the `dark` class on <html>
+                // (see SettingsModule) re-themes every bg-office-*/
+                // text-office-*/border-office-* class already used across
+                // the app with ZERO markup changes needed.
                 office: {
-                    bg: '#f1e7d8',
-                    surface: '#fffcf6',
-                    header: '#7a4a30',
-                    headerDark: '#5f3a25',
-                    accent: '#bb6a33',
-                    accentDark: '#9c5527',
-                    text: '#3a2c22',
-                    muted: '#8a7864',
-                    border: '#ddcbb0',
-                    divider: '#e9dcc5'
+                    bg: 'var(--office-bg)',
+                    surface: 'var(--office-surface)',
+                    header: 'var(--office-header)',
+                    headerDark: 'var(--office-headerDark)',
+                    accent: 'var(--office-accent)',
+                    accentDark: 'var(--office-accentDark)',
+                    text: 'var(--office-text)',
+                    muted: 'var(--office-muted)',
+                    border: 'var(--office-border)',
+                    divider: 'var(--office-divider)'
                 }
             }
         }
