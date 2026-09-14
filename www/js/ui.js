@@ -474,25 +474,34 @@
                     </div>` : '';
 
                 // Both the title and the body preview clamp to a LINE COUNT
-                // that grows with how much text is actually there, instead
-                // of a single fixed clamp for every card. That's what makes
-                // a one-line "Beli susu" note render as a short, compact
-                // card while a long, multi-paragraph note renders as a
-                // visibly taller one — the home grid ends up with real
-                // variation instead of every card being the same boxy
-                // height regardless of content. Values are capped (title at
-                // 3, body at 6) so even a huge note doesn't turn its card
-                // into something absurd next to the others.
-                const titleClamp = this.pickClampLines(note.title || '', [22, 46], 3);
-                const bodyClamp = this.pickClampLines(plainText, [50, 110, 190, 260, 340], 6);
+                // that grows a little with how much text is actually there,
+                // instead of a single fixed clamp for every card — that's
+                // what makes a one-line "Beli susu" note render as a short,
+                // compact card while a longer note renders as a visibly
+                // taller one. Kept deliberately modest (title caps at 2,
+                // body caps at 4) so a huge note still looks like a
+                // reasonably-sized card next to the others, not the
+                // near-uncapped wall of text a too-generous cap produced.
+                //
+                // Applied as an inline -webkit-line-clamp style rather than
+                // a dynamic Tailwind class (line-clamp-${n}) — Tailwind's
+                // Play CDN build only reliably generates CSS for utility
+                // classes it can see, and a class name assembled at runtime
+                // from a template literal isn't guaranteed to be picked up,
+                // which is what let these previews render fully unclamped
+                // instead of actually being limited. The inline style has
+                // no such dependency.
+                const titleClamp = this.pickClampLines(note.title || '', [26], 2);
+                const bodyClamp = this.pickClampLines(plainText, [55, 120, 200], 4);
+                const clampStyle = (n) => `style="display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:${n}; overflow:hidden;"`;
 
                 card.innerHTML = `
                     ${pinBadge}
                     <div class="flex items-start gap-2">
                         ${selectionDot}
                         <div class="min-w-0 flex-1">
-                            <h2 class="text-sm font-semibold note-card-title-text line-clamp-${titleClamp} note-card-divider-b pb-1 mb-2">${this.escapeHtml(note.title)}</h2>
-                            <p class="text-xs note-card-muted-text line-clamp-${bodyClamp} mb-3">${this.escapeHtml(plainText)}</p>
+                            <h2 class="text-sm font-semibold note-card-title-text note-card-divider-b pb-1 mb-2" ${clampStyle(titleClamp)}>${this.escapeHtml(note.title)}</h2>
+                            <p class="text-xs note-card-muted-text mb-3" ${clampStyle(bodyClamp)}>${this.escapeHtml(plainText)}</p>
                         </div>
                     </div>
                     <div class="flex justify-between items-center text-[10px] note-card-muted-text pt-2 note-card-divider-t">
@@ -505,14 +514,14 @@
                 return card;
             },
 
-            // Picks a Tailwind line-clamp count (1..maxLines) for a piece of
-            // text given a set of ascending character-length thresholds —
-            // e.g. thresholds [50, 110, 190, 300] with maxLines 6 means:
-            // under 50 chars -> clamp 1, under 110 -> clamp 2, ... at or
-            // past the last threshold -> clamp maxLines. Kept as a small
-            // shared helper (rather than inlined twice) since both the
-            // title and the body preview in createNoteCard use the same
-            // "more text -> more visible lines, up to a cap" logic.
+            // Picks a line-clamp count (1..maxLines) for a piece of text
+            // given a set of ascending character-length thresholds — e.g.
+            // thresholds [55, 120, 200] with maxLines 4 means: under 55
+            // chars -> clamp 1, under 120 -> clamp 2, under 200 -> clamp 3,
+            // at or past that -> clamp 4. Kept as a small shared helper
+            // (rather than inlined twice) since both the title and the body
+            // preview in createNoteCard use the same "more text -> a few
+            // more visible lines, up to a cap" logic.
             pickClampLines(text, thresholds, maxLines) {
                 const len = (text || '').trim().length;
                 for (let i = 0; i < thresholds.length; i++) {
