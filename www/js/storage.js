@@ -28,13 +28,6 @@
                     letterSpacing: 0,
                     agedPaperEffect: false,
                     eyeProtection: false,
-                    // App-wide Dark Mode for the Home/Settings chrome
-                    // (headers, cards, buttons). Deliberately does NOT
-                    // touch the note editor's own "paper" look — that
-                    // stays governed by paperStyle above, same as a real
-                    // sheet of paper doesn't change color with the room
-                    // lighting.
-                    darkMode: false,
                     // Home screen note-list layout: 1 = single column
                     // (default), 2 = two columns. Purely a Home/UI
                     // preference — doesn't touch the note content or the
