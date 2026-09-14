@@ -3,7 +3,7 @@
            palette (Home + Settings screens / app chrome only). The
            Tailwind configs (js/tailwind-config.js for the browser CDN
            build, tailwind.config.js for the offline APK build) point
-           every bg-office-*/text-office-*/border-office-* utility class
+           every bg-office-*, text-office-*, border-office-* utility class
            at the variable of the matching name below.
            Light mode / the "Mode Gelap" toggle was removed — the app now
            only ever ships this one (formerly "dark") palette, so these
@@ -37,8 +37,8 @@
 
         /* ==========================================================
            BULLETPROOF office-* UTILITY FALLBACKS
-           Plain, hand-authored versions of every bg-office-*/
-           text-office-*/border-office-*/placeholder-office-*/
+           Plain, hand-authored versions of every bg-office-*,
+           text-office-*, border-office-*, placeholder-office-*,
            accent-office-* class used on the Home + Settings screens.
            Normally these classes are generated at runtime by the
            Tailwind CDN script (js/tailwind-config.js extends
@@ -440,7 +440,7 @@
            theme. Letting this wrapper's own border/fallback bg drift dark
            too would fight that paper look right at its edge. Same reason
            the text/badges INSIDE the card use the fixed .note-card-* rules
-           further below instead of text-office-*/border-office-*. */
+           further below instead of text-office-*, border-office-*. */
         .office-card-note {
             background-color: #fffcf6;
             border: 1px solid #ddcbb0;
