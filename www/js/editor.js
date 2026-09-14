@@ -115,6 +115,28 @@
                             scrollTopBeforeFocus = null;
                         }
                         this.scrollCaretIntoView();
+
+                        // The keyboard's open animation doesn't take a fixed
+                        // amount of time — it varies by device, OS version,
+                        // and which keyboard app is installed — so the single
+                        // measurement above can run while the keyboard (and
+                        // the viewport it shrinks) is still mid-animation,
+                        // under-correcting the caret's position. Without a
+                        // reliable visualViewport 'resize' event to catch the
+                        // moment it actually finishes (some WebViews don't
+                        // fire it consistently for on-screen keyboard
+                        // changes), this instead just re-checks a few more
+                        // times over the next second. Any one of these calls
+                        // that lands after the keyboard has actually settled
+                        // will produce the correct, final scroll position —
+                        // which is what previously only happened by chance
+                        // whenever the user's first keystroke (e.g. Enter)
+                        // triggered its own scrollCaretIntoView() via the
+                        // 'input' listener late enough to land after the
+                        // keyboard was fully open.
+                        [100, 250, 400, 700].forEach(delay => {
+                            setTimeout(() => this.scrollCaretIntoView(), delay);
+                        });
                     }, 300);
                 });
 
