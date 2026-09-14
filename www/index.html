@@ -7,34 +7,13 @@
 
     <!-- PWA: installability + native-like chrome -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#8c3a2b">
+    <meta name="theme-color" content="#1c1714">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Vinote">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="icon" href="icons/icon-192.png">
-
-    <!-- Dark Mode: applied as early as possible (before Tailwind/CSS even
-         load) so the app never flashes light-mode colors for a frame
-         before switching to dark on a device that has it saved. Reads
-         localStorage directly instead of waiting for SettingsModule/
-         StorageModule to boot, since those load at the very end of
-         <body>. Safe no-op (falls through to light) if anything here
-         throws — e.g. localStorage blocked in some WebView contexts. -->
-    <script>
-        (function () {
-            try {
-                var raw = localStorage.getItem('vinote_settings_data');
-                var settings = raw ? JSON.parse(raw) : null;
-                if (settings && settings.darkMode) {
-                    document.documentElement.classList.add('dark');
-                    var meta = document.querySelector('meta[name="theme-color"]');
-                    if (meta) meta.setAttribute('content', '#1c1714');
-                }
-            } catch (e) { /* localStorage unavailable — stay light */ }
-        })();
-    </script>
 
     <!-- Google Fonts Vintage & Handwriting -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,7 +145,7 @@
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
                 </button>
 
-                <div id="editorMoreDropdown" class="hidden absolute top-full right-0 mt-1 w-44 bg-vintage-card border-2 border-vintage-dark rounded-md shadow-2xl z-50 p-1 space-y-1">
+                <div id="editorMoreDropdown" class="hidden absolute top-full right-0 mt-1 w-44 bg-vintage-card text-vintage-dark border-2 border-vintage-dark rounded-md shadow-2xl z-50 p-1 space-y-1">
                     <button id="btnUndo" class="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-bold hover:bg-vintage-paper rounded" title="Undo (Urungkan)">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
                         <span>Undo</span>
@@ -288,23 +267,6 @@
                 </div>
 
                 <div class="px-4 space-y-5">
-
-                <!-- Tampilan -->
-                <div>
-                    <h3 class="text-[11px] font-semibold uppercase text-office-muted tracking-wider mb-2 px-1">Tampilan</h3>
-                    <div class="office-card">
-                        <label class="office-row cursor-pointer">
-                            <div class="min-w-0">
-                                <span class="text-xs font-semibold block">Mode Gelap</span>
-                                <span class="text-[10px] text-office-muted">Tampilan gelap untuk Beranda &amp; Pengaturan</span>
-                            </div>
-                            <span class="office-toggle">
-                                <input type="checkbox" id="toggleDarkMode">
-                                <span class="office-toggle-track"></span>
-                            </span>
-                        </label>
-                    </div>
-                </div>
 
                 <!-- Kertas -->
                 <div>
