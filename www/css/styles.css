@@ -1,3 +1,52 @@
+        /* ==========================================================
+           DARK MODE — CSS custom properties for the "office" palette
+           (Home + Settings screens / app chrome only). The Tailwind
+           configs (js/tailwind-config.js for the browser CDN build,
+           tailwind.config.js for the offline APK build) point every
+           bg-office-*/text-office-*/border-office-* utility class at the
+           variable of the matching name below, so simply toggling the
+           `dark` class on <html> (done by SettingsModule from the
+           "Mode Gelap" setting) re-themes the whole app chrome — no
+           per-element markup changes needed.
+           Deliberately NOT applied to: the note editor's own paper look
+           (.theme-vintage/.theme-white — literal "paper", controlled by
+           its own separate Kertas setting) or a note card's internal
+           text/badges on the Home screen (see .note-card-* below) — both
+           are meant to keep looking like paper regardless of app theme,
+           the same way a real paper note doesn't change color just
+           because the room lights dim.
+           ========================================================== */
+        :root {
+            --office-bg: #f1e7d8;
+            --office-surface: #fffcf6;
+            --office-header: #7a4a30;
+            --office-headerDark: #5f3a25;
+            --office-accent: #bb6a33;
+            --office-accentDark: #9c5527;
+            --office-text: #3a2c22;
+            --office-muted: #8a7864;
+            --office-border: #ddcbb0;
+            --office-divider: #e9dcc5;
+            /* Plain R,G,B triplet (no "rgb()") of --office-text, so a
+               rgba(var(--office-text-rgb), alpha) tint can be built where
+               a var() can't be nested inside another color function. Used
+               for the header/settings icon-button press tint below. */
+            --office-text-rgb: 58, 44, 34;
+        }
+        .dark {
+            --office-bg: #1c1714;
+            --office-surface: #241d18;
+            --office-header: #d9c3ab;
+            --office-headerDark: #16110e;
+            --office-accent: #d9803f;
+            --office-accentDark: #b5652f;
+            --office-text: #ede3d3;
+            --office-muted: #a89684;
+            --office-border: #3d322a;
+            --office-divider: #332822;
+            --office-text-rgb: 237, 227, 211;
+        }
+
         /* Custom Fonts mapping */
         /* Font spans size themselves off --note-font-size (kept in sync with
            the "Ukuran Huruf Default" setting on #editorArea) via calc(),
@@ -183,17 +232,21 @@
            real note editor); .paper-aged-effect-preview is the same look
            scoped to a single, already relative-positioned box (used by the
            Settings paper preview). */
+        /* Darkness toned down from the original (opacity 0.65 → 0.42, spot
+           alphas and vignette alpha reduced ~30-35%) — the effect was
+           reading as "too dark/dirty" instead of a subtle aged tint. Same
+           layers/positions, just lighter. */
         .paper-aged-effect,
         .paper-aged-effect-preview {
             pointer-events: none;
-            opacity: 0.65;
+            opacity: 0.42;
             mix-blend-mode: multiply;
             background-image:
-                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.32) 0%, rgba(120,86,42,0) 24%),
-                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.28) 0%, rgba(120,86,42,0) 28%),
-                radial-gradient(circle at 68% 8%, rgba(120,86,42,0.20) 0%, rgba(120,86,42,0) 20%),
-                radial-gradient(circle at 6% 86%, rgba(120,86,42,0.22) 0%, rgba(120,86,42,0) 22%),
-                radial-gradient(ellipse at center, rgba(255,248,225,0) 38%, rgba(60,40,20,0.6) 100%),
+                radial-gradient(circle at 14% 20%, rgba(120,86,42,0.22) 0%, rgba(120,86,42,0) 24%),
+                radial-gradient(circle at 88% 78%, rgba(120,86,42,0.19) 0%, rgba(120,86,42,0) 28%),
+                radial-gradient(circle at 68% 8%, rgba(120,86,42,0.14) 0%, rgba(120,86,42,0) 20%),
+                radial-gradient(circle at 6% 86%, rgba(120,86,42,0.15) 0%, rgba(120,86,42,0) 22%),
+                radial-gradient(ellipse at center, rgba(255,248,225,0) 38%, rgba(60,40,20,0.38) 100%),
                 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
             background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
             background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 160px 160px;
@@ -282,29 +335,30 @@
            original vintage look untouched.
            ========================================================== */
         .btn-office {
-            border: 1px solid #ddcbb0; /* office-border */
-            background-color: #fffcf6; /* office-surface */
+            border: 1px solid var(--office-border);
+            background-color: var(--office-surface);
             transition: background-color 0.12s ease, border-color 0.12s ease;
         }
         .btn-office:active {
-            background-color: #e9dcc5; /* office-divider */
+            background-color: var(--office-divider);
         }
         .btn-office-accent {
-            background-color: #bb6a33; /* office-accent */
-            border: 1px solid #9c5527; /* office-accentDark */
-            color: #fffcf6;
+            background-color: var(--office-accent);
+            border: 1px solid var(--office-accentDark);
+            color: var(--office-surface);
             transition: background-color 0.12s ease;
         }
         .btn-office-accent:active {
-            background-color: #9c5527;
+            background-color: var(--office-accentDark);
         }
 
         /* Settings section card — flat surface, hairline border, sharp
            (2px) corners, rows divided by a thin hairline instead of the
-           old rounded/shadowed vintage card. */
+           old rounded/shadowed vintage card. Theme-aware (dark mode) since
+           this is app chrome, not a note's paper. */
         .office-card {
-            background-color: #fffcf6;
-            border: 1px solid #ddcbb0;
+            background-color: var(--office-surface);
+            border: 1px solid var(--office-border);
             border-radius: 2px;
             overflow: hidden;
         }
@@ -319,22 +373,57 @@
         .office-row-body + .office-row-body,
         .office-row-body + .office-row,
         .office-row + .office-row-body {
-            border-top: 1px solid #e9dcc5;
+            border-top: 1px solid var(--office-divider);
         }
         .office-row-body {
             padding: 0.7rem 0.85rem;
         }
 
-        /* Flat note card used on the Home screen — thin border, sharp
-           corners, no offset/thick shadow. */
+        /* Flat note card used on the Home screen. Corners softened from a
+           near-sharp 2px to 10px ("agak sedikit sudut tumpul") — still
+           compact/flat, just not razor-edged.
+           Colors here are DELIBERATELY fixed hex, NOT the office-* CSS
+           vars, even though Dark Mode exists — the card's job is to
+           preview the note's actual paper, and its real fill color is set
+           inline from SettingsModule.getPaperColor() (see
+           UIModule.createNoteCard), which never changes with the app
+           theme. Letting this wrapper's own border/fallback bg drift dark
+           too would fight that paper look right at its edge. Same reason
+           the text/badges INSIDE the card use the fixed .note-card-* rules
+           further below instead of text-office-*/border-office-*. */
         .office-card-note {
             background-color: #fffcf6;
             border: 1px solid #ddcbb0;
-            border-radius: 2px;
+            border-radius: 10px;
             transition: background-color 0.12s ease;
         }
         .office-card-note:active {
             background-color: #f6ecd9;
+        }
+
+        /* Fixed-color contents for a note card (title, preview text,
+           dividers, pin flag, selection dot/ring, "Buka →" label) — see
+           the comment on .office-card-note just above for why these don't
+           use the theme-aware office-* utility classes: the card always
+           sits on its own light "paper" fill regardless of Dark Mode, so
+           its own text/accents must stay fixed too or they'd turn
+           light-on-light and unreadable when Dark Mode is on. */
+        .note-card-title-text { color: #3a2c22; }
+        .note-card-muted-text { color: #8a7864; }
+        .note-card-accent-text { color: #bb6a33; }
+        .note-card-divider-b { border-bottom: 1px solid #e9dcc5; }
+        .note-card-divider-t { border-top: 1px solid #e9dcc5; }
+        .note-card-pin-flag { background-color: #bb6a33; }
+        .note-card-dot {
+            border: 1px solid #ddcbb0;
+            background-color: #fffcf6;
+        }
+        .note-card-dot-checked {
+            background-color: #bb6a33;
+            border-color: #bb6a33;
+        }
+        .note-card-ring {
+            box-shadow: 0 0 0 2px #bb6a33;
         }
 
         /* ==========================================================
@@ -351,7 +440,21 @@
            list below it, independent of the safe-area's top-only inset.
            ========================================================== */
         .app-home-header {
-            min-height: 56px;
+            /* BUGFIX: was a flat 56px, which only happened to match
+               #headerDefault by coincidence — that header's content is
+               forced to 44px tall by .search-capsule (the search input),
+               so its real rendered height was 44px + this rule's own
+               0.625rem top/bottom padding = 64px, quietly overriding the
+               56px floor. #headerSelection's content (icon buttons + a
+               text label, no search input) is only ~36px tall, so
+               36px + the same padding landed exactly ON the 56px floor
+               instead of being pushed past it — an 8px mismatch between
+               the two headers, seen as a small "jump" whenever batch
+               selection mode toggled. Expressing the floor as the SAME
+               44px content height + padding formula (instead of a
+               separately-guessed 56px) guarantees every header using this
+               class always resolves to the exact same total height. */
+            min-height: calc(44px + 1.25rem);
             box-sizing: border-box;
             padding-top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 0.625rem);
             padding-bottom: 0.625rem;
@@ -385,7 +488,12 @@
             transition: background-color 0.12s ease;
         }
         .icon-btn-plain:active {
-            background-color: rgba(58, 44, 34, 0.08); /* faint office-text tint, no visible frame at rest */
+            /* Faint office-text tint, no visible frame at rest. Built from
+               --office-text-rgb (a plain "R, G, B" var, since a var()
+               can't be nested as a whole color value inside rgba()) so
+               the press tint flips from a dark smudge (light mode) to a
+               light glow (dark mode) automatically along with the theme. */
+            background-color: rgba(var(--office-text-rgb), 0.08);
         }
 
         /* ==========================================================
@@ -410,9 +518,9 @@
            using the new office accent instead of the old vintage-accent
            red-brown — Settings-only, doesn't touch the editor. */
         .font-option-active {
-            background-color: #bb6a33 !important;
+            background-color: var(--office-accent) !important;
             color: #ffffff !important;
-            border-color: #9c5527 !important;
+            border-color: var(--office-accentDark) !important;
             box-shadow: none !important;
         }
 
@@ -438,7 +546,7 @@
         .office-toggle .office-toggle-track {
             position: absolute;
             inset: 0;
-            background-color: #ddcbb0;
+            background-color: var(--office-border);
             border-radius: 999px;
             transition: background-color 0.15s ease;
         }
@@ -447,12 +555,12 @@
             position: absolute;
             top: 2px; left: 2px;
             width: 18px; height: 18px;
-            background-color: #fffcf6;
+            background-color: var(--office-surface);
             border-radius: 50%;
             transition: transform 0.15s ease;
         }
         .office-toggle input:checked + .office-toggle-track {
-            background-color: #bb6a33;
+            background-color: var(--office-accent);
         }
         .office-toggle input:checked + .office-toggle-track::before {
             transform: translateX(16px);
@@ -460,9 +568,20 @@
 
         /* Layout toggle button (1-column / 2-column) active state on Home */
         .layout-btn-active {
-            background-color: #bb6a33 !important;
-            border-color: #9c5527 !important;
+            background-color: var(--office-accent) !important;
+            border-color: var(--office-accentDark) !important;
             color: #ffffff !important;
+        }
+
+        /* Toast/snackbar — deliberately FIXED colors (not office-* vars):
+           a floating toast should always read as a dark pill with light
+           text, in both themes (the same way most apps' snackbars don't
+           flip with light/dark mode), so it doesn't go
+           dark-bg-on-dark-text illegible once Dark Mode uses a dark
+           --office-surface. */
+        .toast-pill {
+            background-color: #3a2c22;
+            color: #fdf8ec;
         }
 
         /* Settings toggle switch — replaces plain checkboxes with a small
