@@ -14,9 +14,27 @@
                 this.titleInput = document.getElementById('noteTitleInput');
 
                 // Input Events for Auto-save & Undo Snapshots
+                //
+                // scrollCaretIntoView() is deliberately NOT called
+                // synchronously here, unlike it looks like it should be.
+                // Every other call site in this file (focus, the
+                // visualViewport 'resize' listener, Enter-from-title) waits
+                // a frame or more before measuring, specifically because
+                // interactive-widget=resizes-content's layout-viewport
+                // shrink doesn't necessarily finish within the same
+                // synchronous tick as the keystroke that triggered it. A
+                // synchronous call here was measuring against a
+                // still-mid-resize frame — close enough to "correct" that
+                // it wasn't obviously wrong, but consistently a little
+                // short, so each keystroke typed without pausing (no Enter
+                // to force a full block-level reflow in between) left the
+                // caret creeping further under the keyboard instead of
+                // ever fully catching up. Waiting one rAF lets that
+                // keystroke's own layout pass complete first, so the
+                // measurement matches what's actually on screen.
                 this.editorArea.addEventListener('input', () => {
                     this.onEditorInput();
-                    this.scrollCaretIntoView();
+                    requestAnimationFrame(() => this.scrollCaretIntoView());
                 });
                 this.titleInput.addEventListener('input', () => {
                     this.saveCurrentNote();
@@ -88,6 +106,34 @@
                         requestAnimationFrame(() => this.scrollCaretIntoView());
                     });
                 }
+
+                // --- Recover caret position after the app is backgrounded
+                // and resumed (home-button/app-switch, NOT closing the
+                // note) ---
+                // Nothing previously re-ran scrollCaretIntoView() here —
+                // only a *fresh* focus event did (via the 'focus' listener
+                // below), which doesn't fire again just because the WebView
+                // came back to the foreground while the editor was already
+                // focused. The keyboard/visualViewport frequently comes
+                // back slightly different than it left (re-shown at a
+                // different height, or the WebView's internal layout state
+                // stale from being suspended), so without this the caret
+                // could be left under the keyboard indefinitely — only the
+                // next keystroke's own (now rAF-guarded, but still
+                // single-shot) correction would touch it, which is exactly
+                // why this got worse specifically after backgrounding.
+                // Re-uses the same multi-delay re-check pattern as the
+                // 'focus' listener below, since the keyboard's re-open
+                // animation on resume is just as variable in timing as its
+                // very first open.
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState !== 'visible') return;
+                    if (document.activeElement !== this.editorArea && document.activeElement !== this.titleInput) return;
+                    requestAnimationFrame(() => this.scrollCaretIntoView());
+                    [100, 250, 400, 700].forEach(delay => {
+                        setTimeout(() => this.scrollCaretIntoView(), delay);
+                    });
+                });
 
                 // Capture the paper's scroll position the instant BEFORE a tap
                 // can turn into a focus, while it's still definitely untouched.
