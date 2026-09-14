@@ -1,13 +1,14 @@
         /* ==========================================================
-           DARK MODE — CSS custom properties for the "office" palette
-           (Home + Settings screens / app chrome only). The Tailwind
-           configs (js/tailwind-config.js for the browser CDN build,
-           tailwind.config.js for the offline APK build) point every
-           bg-office-*/text-office-*/border-office-* utility class at the
-           variable of the matching name below, so simply toggling the
-           `dark` class on <html> (done by SettingsModule from the
-           "Mode Gelap" setting) re-themes the whole app chrome — no
-           per-element markup changes needed.
+           APP CHROME PALETTE — CSS custom properties for the "office"
+           palette (Home + Settings screens / app chrome only). The
+           Tailwind configs (js/tailwind-config.js for the browser CDN
+           build, tailwind.config.js for the offline APK build) point
+           every bg-office-*/text-office-*/border-office-* utility class
+           at the variable of the matching name below.
+           Light mode / the "Mode Gelap" toggle was removed — the app now
+           only ever ships this one (formerly "dark") palette, so these
+           values live directly on :root instead of behind a `.dark`
+           class. No JS/localStorage flag decides this anymore.
            Deliberately NOT applied to: the note editor's own paper look
            (.theme-vintage/.theme-white — literal "paper", controlled by
            its own separate Kertas setting) or a note card's internal
@@ -17,23 +18,6 @@
            because the room lights dim.
            ========================================================== */
         :root {
-            --office-bg: #f1e7d8;
-            --office-surface: #fffcf6;
-            --office-header: #7a4a30;
-            --office-headerDark: #5f3a25;
-            --office-accent: #bb6a33;
-            --office-accentDark: #9c5527;
-            --office-text: #3a2c22;
-            --office-muted: #8a7864;
-            --office-border: #ddcbb0;
-            --office-divider: #e9dcc5;
-            /* Plain R,G,B triplet (no "rgb()") of --office-text, so a
-               rgba(var(--office-text-rgb), alpha) tint can be built where
-               a var() can't be nested inside another color function. Used
-               for the header/settings icon-button press tint below. */
-            --office-text-rgb: 58, 44, 34;
-        }
-        .dark {
             --office-bg: #1c1714;
             --office-surface: #241d18;
             --office-header: #d9c3ab;
@@ -44,6 +28,10 @@
             --office-muted: #a89684;
             --office-border: #3d322a;
             --office-divider: #332822;
+            /* Plain R,G,B triplet (no "rgb()") of --office-text, so a
+               rgba(var(--office-text-rgb), alpha) tint can be built where
+               a var() can't be nested inside another color function. Used
+               for the header/settings icon-button press tint below. */
             --office-text-rgb: 237, 227, 211;
         }
 
@@ -256,6 +244,19 @@
             position: fixed;
             inset: 0;
             z-index: 9999;
+            /* Own compositor layer, same trick as .app-home-header below.
+               Without this, some Android WebView builds paint the Home
+               header's own promoted layer (it has `transform: translateZ(0);
+               will-change: transform` for its own repaint-bug fix) ABOVE
+               this overlay despite this overlay's much higher z-index — two
+               different compositing paths (one promoted, one not) don't
+               reliably respect z-index against each other. That's why the
+               header looked untouched by the aged-paper/eye-protection tint
+               while the rest of the Home tab visibly changed color. Promoting
+               this to the same kind of layer makes both sides order strictly
+               by z-index again, so the header tints along with everything else. */
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         /* Eye Protection Mode ("Mode Perlindungan Mata") — a warm amber
@@ -271,6 +272,11 @@
             background-color: #ffb74d;
             mix-blend-mode: multiply;
             opacity: 0.34;
+            /* Same compositor-layer fix as .paper-aged-effect above — keeps
+               this overlay reliably above the Home header's own promoted
+               layer instead of the two fighting over paint order. */
+            transform: translateZ(0);
+            will-change: transform;
         }
 
         .paper-aged-effect-preview {
