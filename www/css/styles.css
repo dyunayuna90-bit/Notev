@@ -755,6 +755,18 @@
    "header" feel instead of the title sitting right under the notch/menu). */
 #paperCanvas {
     padding-top: calc(var(--native-inset-top, env(safe-area-inset-top, 0px)) + 3.5rem);
+    /* Reserves actual scrollable space below the note's last line.
+       scroll-padding-bottom just below only tells the native
+       scrollIntoView() to stop short of the edge — it has nothing to
+       work with if the content already ends flush with (or before) the
+       container's bottom edge. That's exactly what was happening: once
+       the caret reached the end of a note, #paperCanvas was already at
+       its maximum scrollTop, so there was no room left to push the last
+       line up away from the keyboard — it just sat flush against it,
+       no matter what scroll-padding-bottom said. This padding
+       guarantees that room always exists, regardless of how long the
+       note is. */
+    padding-bottom: 45vh;
     /* Tells the browser's native scrollIntoView() (used by
        EditorModule.scrollCaretIntoView()) to stop this many pixels short
        of each edge instead of scrolling the caret flush against it — this
@@ -762,7 +774,7 @@
        and below the top notch/menu, without EditorModule needing to
        compute that margin by hand. */
     scroll-padding-top: 24px;
-    scroll-padding-bottom: 40px;
+    scroll-padding-bottom: 56px;
 }
 @media (min-width: 768px) {
     #paperCanvas {
