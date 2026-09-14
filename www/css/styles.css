@@ -693,6 +693,23 @@
     box-sizing: border-box;
 }
 
+/* BUGFIX: #settingsModal ("Pengaturan") is a `position: fixed` full-screen
+   overlay that gets shown by simply removing its "hidden" class
+   (UIModule.toggleModal) — #viewNotesList underneath is never itself
+   hidden, it's just supposed to be fully covered. On some Android
+   WebViews, a `position: fixed` element that appears suddenly (no
+   transition) doesn't reliably get its own paint/compositor layer, so its
+   solid bg-office-bg background can render with the still-visible
+   #viewNotesList (search bar, empty-state text, etc.) bleeding through
+   underneath — exactly the same class of WebView repaint bug already
+   worked around on .app-home-header above (see that rule's comment).
+   Forcing #settingsModal onto its own compositor layer guarantees its
+   background is always fully opaque/painted the instant it's shown. */
+#settingsModal {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
 /* #headerDefault, #headerSelection, and #headerSettings all get their
    top safe-area inset from the shared .app-home-header class above (see
    css block near .office-card-note) — no per-ID override needed here
