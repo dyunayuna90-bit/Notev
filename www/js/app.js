@@ -14,6 +14,23 @@ window.addEventListener('DOMContentLoaded', () => {
     ServiceWorkerModule.init();
 });
 
+// Autosave while typing is now debounced (EditorModule.scheduleAutosave)
+// so it doesn't run on every single keystroke. That means a still-pending
+// write could in theory be sitting in that timer if the app gets minimized
+// or killed by Android right after the user's last keystroke — before the
+// timer fires on its own. 'visibilitychange' catches home-button/app-switch
+// (fires reliably on Android), 'pagehide' catches the WebView being torn
+// down outright; either one flushes that pending write immediately.
+const flushPendingNote = () => {
+    if (typeof EditorModule !== 'undefined' && EditorModule.autosaveTimer) {
+        EditorModule.flushAutosave();
+    }
+};
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingNote();
+});
+window.addEventListener('pagehide', flushPendingNote);
+
 // --- MODULE 8: CAPACITOR HARDWARE BACK BUTTON ---
 // Only does anything when actually running inside the native Android
 // shell (window.Capacitor is injected automatically by the native runtime
