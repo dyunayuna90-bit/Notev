@@ -55,23 +55,29 @@
            vintage/paper look already doesn't depend on it. Safe to
            keep even if Tailwind DOES work: same selectors, same
            values, so there's no conflict either way. */
-        .bg-office-bg { background-color: var(--office-bg); }
-        .bg-office-surface { background-color: var(--office-surface); }
-        .bg-office-accent { background-color: var(--office-accent); }
-        .active\:bg-office-accentDark:active { background-color: var(--office-accentDark); }
+        .bg-office-bg { background-color: var(--office-bg) !important; }
+        .bg-office-surface { background-color: var(--office-surface) !important; }
+        .bg-office-accent { background-color: var(--office-accent) !important; }
+        .active\:bg-office-accentDark:active { background-color: var(--office-accentDark) !important; }
 
-        .border-office-accent { border-color: var(--office-accent); }
-        .border-office-accentDark { border-color: var(--office-accentDark); }
-        .border-office-border { border-color: var(--office-border); }
-        .focus\:border-office-accent:focus { border-color: var(--office-accent); }
+        .border-office-accent { border-color: var(--office-accent) !important; }
+        .border-office-accentDark { border-color: var(--office-accentDark) !important; }
+        .border-office-border { border-color: var(--office-border) !important; }
+        .focus\:border-office-accent:focus { border-color: var(--office-accent) !important; }
 
-        .text-office-accent { color: var(--office-accent); }
-        .text-office-muted { color: var(--office-muted); }
-        .text-office-text { color: var(--office-text); }
+        .text-office-accent { color: var(--office-accent) !important; }
+        .text-office-muted { color: var(--office-muted) !important; }
+        .text-office-text { color: var(--office-text) !important; }
 
-        .placeholder-office-muted::placeholder { color: var(--office-muted); }
+        .placeholder-office-muted::placeholder { color: var(--office-muted) !important; }
 
-        .accent-office-accent { accent-color: var(--office-accent); }
+        .accent-office-accent { accent-color: var(--office-accent) !important; }
+
+        /* Belt-and-suspenders: if for any reason none of the classes above
+           are even present on an element (e.g. a future markup change), the
+           core app chrome should still never fall back to the browser's
+           plain white/default canvas. */
+        html, body { background-color: var(--office-bg) !important; }
 
         /* Custom Fonts mapping */
         /* Font spans size themselves off --note-font-size (kept in sync with
