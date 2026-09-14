@@ -16,7 +16,48 @@
                     this.onEditorInput();
                     this.scrollCaretIntoView();
                 });
-                this.titleInput.addEventListener('input', () => this.saveCurrentNote());
+                this.titleInput.addEventListener('input', () => {
+                    this.saveCurrentNote();
+                    this.autoSizeTitle();
+                });
+
+                // Enter in the title moves focus into the body instead of
+                // doing nothing/whatever a lone <textarea> outside a form
+                // would otherwise do — this is handled explicitly (rather
+                // than left to native/IME "next field" behavior) specifically
+                // so we can pass preventScroll:true to focus() below. Without
+                // that, the native focus-triggered scroll-into-view some
+                // Android WebViews do for a freshly-focused element (the
+                // same one described in the scrollCaretIntoView comment
+                // further down, for a plain tap) fires completely
+                // unchecked here — there's no pointerdown on #editorArea to
+                // hang the tap-restore trick off of when focus arrives this
+                // way, so it was free to overshoot and yank the whole paper
+                // up far enough to sit under the notch. Suppressing that
+                // native jump and then deciding the scroll ourselves via
+                // scrollCaretIntoView() (the same path a normal tap already
+                // uses safely) fixes it without touching that other flow.
+                this.titleInput.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+
+                    this.editorArea.focus({ preventScroll: true });
+
+                    // Land the caret at the very start of the body, ready to
+                    // type from the top — matches what "moving down into the
+                    // next field" should feel like.
+                    const range = document.createRange();
+                    range.selectNodeContents(this.editorArea);
+                    range.collapse(true);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+
+                    // Wait a frame so the title's own height (it may have
+                    // just grown/shrunk) has settled before measuring where
+                    // the caret actually landed.
+                    requestAnimationFrame(() => this.scrollCaretIntoView());
+                });
 
                 // --- Keyboard-aware caret scrolling ---
                 // The <meta viewport ... interactive-widget=resizes-content> tag
@@ -229,6 +270,25 @@
                 reassert();
             },
 
+            // Grows/shrinks the title <textarea> to fit however many lines
+            // it actually wraps to (a plain textarea never does this on its
+            // own). Resetting height to 'auto' first is required before
+            // reading scrollHeight — otherwise scrollHeight just reports the
+            // CURRENT (possibly now-too-tall-for-the-content) height back,
+            // and the box would only ever grow, never shrink back down after
+            // deleting text.
+            autoSizeTitle() {
+                this.titleInput.style.height = 'auto';
+                this.titleInput.style.height = this.titleInput.scrollHeight + 'px';
+                // The title growing/shrinking moves #editorArea's top edge,
+                // which is exactly what the ruled-line background's phase
+                // is measured from — without re-syncing here, typing a
+                // title long enough to wrap to a 2nd/3rd line would leave
+                // the ruled lines increasingly misaligned with the actual
+                // text baseline until the next window resize.
+                if (typeof SettingsModule !== 'undefined') SettingsModule.syncRuledLineAlignment();
+            },
+
             loadNote(noteId) {
                 this.currentNoteId = noteId;
                 this.undoStack.clear();
@@ -252,6 +312,13 @@
                 }
 
                 this.sanitizeInlineFontSizes();
+
+                // Textarea height doesn't auto-track a value set via JS
+                // (only real typing triggers 'input'), so every note load
+                // needs its own explicit resize — otherwise a short note
+                // opened right after a long one would inherit the long
+                // one's tall title box until the user typed something.
+                this.autoSizeTitle();
 
                 // Initial Undo Snapshot
                 this.undoStack.pushState(this.editorArea.innerHTML, true);
